@@ -18,13 +18,12 @@ umi.use(signerIdentity(signer));
         // Follow this JSON structure
         // https://docs.metaplex.com/programs/token-metadata/changelog/v1.0#json-structure
 
-        const image = await readFile("/home/user_nuel21/Q3_25_Builder_Onana/solana-starter/ts/cluster1/asset/generug.png");
-        const genericFile = createGenericFile(image, "image/png");
+        const image = "https://gateway.irys.xyz/Byn7hVVtnaYXa7675yWPSkgFqeQj775B8vLN3cgZZZHq";
         const metadata = {
             name: "SONA",
             symbol: "SoNa",
             description: "onchain agent",
-            image: genericFile,
+            image: image,
             attributes: [
                 {trait_type: 'Background', value: 'Yellow'}
            ],
@@ -32,11 +31,17 @@ umi.use(signerIdentity(signer));
                 files: [
                     {
                         type: "image/png",
-                        uri: "https://gateway.irys.xyz/AaXAGXomN8kgCkRE3WNtAMUcSBxTV585gdFZpwgGREiV"
+                        uri: image
                     }
                 ]
             },
-            creators: []
+            creators: [
+                {
+                    address: signer.publicKey,
+                    share: 100,
+                    verified: true
+                }
+            ]
         };
          // Upload the metadata and get the URI
          const myUri: string = await umi.uploader.uploadJson(metadata);

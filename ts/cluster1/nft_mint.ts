@@ -14,13 +14,13 @@ umi.use(signerIdentity(myKeypairSigner));
 umi.use(mplTokenMetadata())
 
 const mint = generateSigner(umi);
-
+const metadataUri = "https://gateway.irys.xyz/3NgzhV4B9e1aM9NqhrCGumr1MVvCAFgdg3wvNS4hUJJH";
 (async () => {
      let tx = createNft(umi, {
         mint,
         authority: myKeypairSigner,
         name: "SONA",
-        uri: "https://gateway.irys.xyz/6soYxrMJ7NmxsmjzFs3wi82YFvWuF5CDR8PhCRkoGVwy",
+        uri: metadataUri,
         sellerFeeBasisPoints: percentAmount(5, 2), // 5%
         symbol: "NFT",
         isMutable: true,

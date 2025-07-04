@@ -19,8 +19,10 @@ umi.use(signerIdentity(signer));
         //2. Convert image to generic file.
         //3. Upload image
 
-        const image = await readFile("/home/user_nuel21/Q3_25_Builder_Onana/solana-starter/ts/cluster1/asset/generug.png");
-        const genericFile = createGenericFile(image, "image/png");
+        const image = await readFile("/home/user_nuel21/Q3_25_Builder_Onana/ts/cluster1/asset/image.png");
+        const genericFile = createGenericFile(image, "random.png", {
+            "contentType": "image/png"
+        });
 
         const [myUri] = await umi.uploader.upload([genericFile]);
         console.log("Your image URI: ", myUri);
