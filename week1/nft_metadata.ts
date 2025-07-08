@@ -1,4 +1,4 @@
-import wallet from "../turbin3-wallet.json"
+import walletJson from "../prereq/airdrop/Turbin3-wallet.json"
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults"
 import { createGenericFile, createSignerFromKeypair, signerIdentity } from "@metaplex-foundation/umi"
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys"
@@ -7,7 +7,7 @@ import { readFile } from "fs/promises";
 // Create a devnet connection
 const umi = createUmi('https://api.devnet.solana.com');
 
-let keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
+let keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(walletJson.wallet));
 const signer = createSignerFromKeypair(umi, keypair);
 
 umi.use(irysUploader());

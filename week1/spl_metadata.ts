@@ -1,4 +1,4 @@
-import wallet from "../turbin3-wallet.json"
+import walletJson from "../prereq/airdrop/Turbin3-wallet.json"
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults"
 import { 
     createMetadataAccountV3, 
@@ -14,7 +14,7 @@ const mint = publicKey("Bw5UEL41LPJPD1SoZYtPxDWZdViYKuGZm9nCWV87dXq");
 
 // Create a UMI connection
 const umi = createUmi('https://api.devnet.solana.com');
-const keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
+const keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(walletJson.wallet));
 const signer = createSignerFromKeypair(umi, keypair);
 umi.use(signerIdentity(createSignerFromKeypair(umi, keypair)));
 
@@ -29,7 +29,7 @@ umi.use(signerIdentity(createSignerFromKeypair(umi, keypair)));
         let data: DataV2Args = {
             name: "Onana",
             symbol: "ONT",
-            uri: "https://my-token-uri.com",
+            uri: "",
             sellerFeeBasisPoints: 0,
             creators: null, // or an array of creators if you have any
             collection: null, // or a collection public key if applicable

@@ -1,0 +1,29 @@
+{
+  "name": "turbin3-solana-week1-local",
+  "version": "1.0.0",
+  "license": "MIT",
+  "scripts": {
+    "spl_init": "ts-node ./spl_init.ts",
+    "spl_mint": "ts-node ./spl_mint.ts",
+    "spl_transfer": "ts-node ./spl_transfer.ts",
+    "spl_metadata": "ts-node ./spl_metadata.ts",
+    "nft_image": "ts-node ./nft_image.ts",
+    "nft_metadata": "ts-node ./nft_metadata.ts",
+    "nft_mint": "ts-node ./nft_mint.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@metaplex-foundation/mpl-token-metadata": "^3.4.0",
+    "@metaplex-foundation/umi": "^1.2.0",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
+    "@metaplex-foundation/umi-uploader-irys": "^1.2.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.87.6",
+    "bs58": "^6.0.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.2",
+    "@types/node": "^24.0.7"
+  }
+} 
