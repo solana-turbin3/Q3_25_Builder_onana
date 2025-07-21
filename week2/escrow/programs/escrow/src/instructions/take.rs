@@ -78,7 +78,7 @@ pub struct Take<'info> {
 
 }
 
-pub fn take(ctx: Context<Take>, _seed: u64) -> Result<()> {
+pub fn take(ctx: Context<Take>) -> Result<()> {
     let signer_seeds: [&[&[u8]]; 1] = [&[
         b"escrow",
         ctx.accounts.maker.to_account_info().key.as_ref(),

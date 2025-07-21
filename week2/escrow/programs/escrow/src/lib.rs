@@ -26,6 +26,6 @@ pub mod anchor_escrow {
     }
 
     pub fn take(ctx: Context<Take>, seed: u64) -> Result<()> {
-        instructions::take::take(ctx, seed)
+        instructions::take::take(ctx)
     }
 }
