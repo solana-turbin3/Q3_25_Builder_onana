@@ -1,0 +1,5 @@
+[toolchain]
+channel = "bpf"
+
+[target.bpf-unknown-unknown.dependencies.std]
+features = []
