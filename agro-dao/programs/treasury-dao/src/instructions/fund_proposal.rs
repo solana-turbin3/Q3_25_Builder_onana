@@ -3,9 +3,10 @@ use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount};
 use crate::state::*;
 use crate::constants::*;
 use crate::error::TreasuryError;
+use crate::research_dao_cpi::*;
 
 #[derive(Accounts)]
-#[instruction(proposal_id: String)]
+#[instruction(proposal_id: String, proposal_id_u64: u64)]
 pub struct FundProposal<'info> {
     #[account(
         seeds = [TREASURY_CONFIG_SEED],
@@ -22,24 +23,6 @@ pub struct FundProposal<'info> {
         space = 8 + ProposalFunding::INIT_SPACE
     )]
     pub proposal_funding: Account<'info, ProposalFunding>,
-
-    // Cross-program verification: ensure proposal exists in research DAO
-    #[account(
-        seeds = [b"proposal", research_proposal.researcher.as_ref(), &research_proposal.proposal_id.to_le_bytes()],
-        bump,
-        seeds::program = research_dao_program.key(),
-        constraint = research_proposal.status == ProposalStatus::Approved @ TreasuryError::ProposalNotApproved
-    )]
-    pub research_proposal: Account<'info, ResearchProposal>,
-
-    // Verify stakeholder is verified researcher
-    #[account(
-        seeds = [b"researcher", stakeholder.key().as_ref()],
-        bump,
-        seeds::program = research_dao_program.key(),
-        constraint = stakeholder_profile.is_verified @ TreasuryError::ResearcherNotVerified
-    )]
-    pub stakeholder_profile: Account<'info, ResearcherProfile>,
 
     #[account(
         mut,
@@ -66,7 +49,14 @@ pub struct FundProposal<'info> {
     #[account(mut)]
     pub stakeholder: Signer<'info>,
 
-    /// CHECK: This is the research DAO program for CPI
+    // Research DAO accounts for CPI validation
+    /// CHECK: Validated by research DAO CPI call
+    pub research_proposal: AccountInfo<'info>,
+    
+    /// CHECK: Validated by research DAO CPI call  
+    pub researcher_profile: AccountInfo<'info>,
+
+    /// CHECK: Research DAO program for CPI
     pub research_dao_program: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
@@ -75,13 +65,22 @@ pub struct FundProposal<'info> {
 }
 
 impl<'info> FundProposal<'info> {
-    pub fn fund_proposal(&mut self, proposal_id: String, amount: u64, bumps: &FundProposalBumps) -> Result<()> {
-        // Validate inputs
+    pub fn fund_proposal(&mut self, proposal_id: String, proposal_id_u64: u64, amount: u64, bumps: &FundProposalBumps) -> Result<()> {
+        // Basic validation
         require!(amount > 0, TreasuryError::InvalidAmount);
         require!(
             proposal_id.len() <= MAX_PROPOSAL_ID_LENGTH,
             TreasuryError::ProposalIdTooLong
         );
+
+        // Validate proposal using CPI to research DAO
+        validate_proposal_for_funding_cpi(
+            self.research_dao_program.clone(),
+            self.research_proposal.clone(),
+            self.researcher_profile.clone(),
+            proposal_id_u64,
+            amount,
+        )?;
 
         // Check if stakeholder has enough AGRO tokens
         require!(

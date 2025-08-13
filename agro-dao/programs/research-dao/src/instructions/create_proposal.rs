@@ -7,7 +7,11 @@ use crate::error::ErrorCode;
 pub struct CreateProposal<'info> {
     #[account(
         init,
-        seeds = [b"proposal", researcher.key().as_ref(), researcher_profile.total_proposals.to_le_bytes().as_ref()],
+        seeds = [
+            b"proposal",
+            researcher.key().as_ref(),
+            &((researcher_profile.total_proposals as u64).to_le_bytes())
+        ],
         bump,
         payer = researcher,
         space = 8 + ResearchProposal::INIT_SPACE

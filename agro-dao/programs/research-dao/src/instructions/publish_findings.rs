@@ -9,7 +9,12 @@ pub struct PublishFindings<'info> {
         seeds = [b"proposal", research_proposal.researcher.key().as_ref(), research_proposal.id.to_le_bytes().as_ref()],
         bump = research_proposal.bump,
         has_one = researcher @ ErrorCode::UnauthorizedResearcher,
-        constraint = research_proposal.status == ProposalStatus::Completed @ ErrorCode::InvalidProposalStatus
+        // Allow publishing findings when the work is effectively complete.
+        // Accept Completed, or allow if all milestones are completed while
+        // status is still InProgress or SubmittedForFunding.
+        constraint = research_proposal.status == ProposalStatus::Completed
+            || research_proposal.status == ProposalStatus::InProgress
+            || research_proposal.status == ProposalStatus::SubmittedForFunding @ ErrorCode::InvalidProposalStatus
     )]      
     pub research_proposal: Account<'info, ResearchProposal>,
     
@@ -39,6 +44,14 @@ impl<'info> PublishFindings<'info> {
             self.research_proposal.findings_ipfs_hash.is_none(),
             ErrorCode::FindingsAlreadyPublished
         );
+
+        // If not explicitly marked Completed yet, ensure all milestones are completed
+        // and move status to Completed.
+        let all_completed = self.research_proposal.milestones.iter().all(|m| m.is_completed);
+        if self.research_proposal.status != ProposalStatus::Completed {
+            require!(all_completed, ErrorCode::InvalidProposalStatus);
+            self.research_proposal.status = ProposalStatus::Completed;
+        }
 
         // Update proposal with findings
         self.research_proposal.findings_ipfs_hash = Some(findings_ipfs_hash);

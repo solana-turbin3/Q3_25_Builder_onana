@@ -37,4 +37,15 @@ pub enum ErrorCode {
     FindingsAlreadyPublished,
     #[msg("Researcher already verified")]
     AlreadyVerified,
+    // Treasury validation errors
+    #[msg("Proposal not eligible for treasury funding")]
+    ProposalNotEligibleForFunding,
+    #[msg("Researcher not verified for funding")]
+    ResearcherNotVerifiedForFunding,
+    #[msg("Invalid proposal for funding")]
+    InvalidProposalForFunding,
+    #[msg("Excessive funding amount")]
+    ExcessiveFunding,
+    #[msg("Funding deadline has passed")]
+    FundingDeadlinePassed,
 }

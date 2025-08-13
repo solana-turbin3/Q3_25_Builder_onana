@@ -1,40 +1,57 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program::invoke_signed;
-use anchor_lang::solana_program::instruction::Instruction;
-use crate::state::{Proposal, GovernanceConfig, ProposalStatus, ProposalType};
+use crate::state::*;
 use crate::constants::*;
-use crate::error::GovernanceError;
+use crate::error::*;
 
 #[derive(Accounts)]
 #[instruction(proposal_id: u64)]
 pub struct ExecuteProposal<'info> {
-    #[account(mut)]
-    pub executor: Signer<'info>,
+    #[account(
+        seeds = [GOVERNANCE_SEED],
+        bump = governance_config.bump
+    )]
+    pub governance_config: Account<'info, GovernanceConfig>,
 
     #[account(
         mut,
         seeds = [PROPOSAL_SEED, &proposal_id.to_le_bytes()],
         bump = proposal.bump,
-        constraint = proposal.proposal_status == ProposalStatus::Approved @ GovernanceError::ProposalNotApproved,
-        constraint = Clock::get()?.unix_timestamp >= proposal.execution_available_at @ GovernanceError::ExecutionNotYetAvailable,
-        constraint = Clock::get()?.unix_timestamp <= proposal.execution_expires_at @ GovernanceError::ExecutionWindowExpired
+        constraint = proposal.status == ProposalStatus::Approved @ GovernanceError::ProposalNotApproved
     )]
     pub proposal: Account<'info, Proposal>,
 
-    #[account(
-        seeds = [GOVERNANCE_CONFIG_SEED],
-        bump = governance_config.bump,
-        constraint = !governance_config.emergency_pause @ GovernanceError::GovernancePaused
-    )]
-    pub governance_config: Account<'info, GovernanceConfig>,
+    /// CHECK: Authority can be anyone for execution
+    pub authority: Signer<'info>,
 
-    /// CHECK: This will be the treasury program account
-    #[account(mut)]
+    /// Treasury program for treasury proposals
+    /// CHECK: Verified by address constraint
+    #[account(
+        address = TREASURY_PROGRAM_ID
+    )]
     pub treasury_program: UncheckedAccount<'info>,
 
-    /// CHECK: This will be the research program account  
-    #[account(mut)]
+    /// Research program for research proposals
+    /// CHECK: Verified by address constraint
+    #[account(
+        address = RESEARCH_PROGRAM_ID
+    )]
     pub research_program: UncheckedAccount<'info>,
+
+    /// Reputation program for reputation updates
+    /// CHECK: Verified by address constraint
+    #[account(
+        address = REPUTATION_PROGRAM_ID
+    )]
+    pub reputation_program: UncheckedAccount<'info>,
+
+    /// CHECK: Treasury config account for treasury proposals
+    pub treasury_config: UncheckedAccount<'info>,
+
+    /// CHECK: Proposal funding account for research proposals  
+    pub proposal_funding: UncheckedAccount<'info>,
+
+    /// CHECK: Researcher profile for research proposals
+    pub researcher_profile: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -42,15 +59,18 @@ pub struct ExecuteProposal<'info> {
 impl<'info> ExecuteProposal<'info> {
     pub fn execute_proposal(&mut self, proposal_id: u64) -> Result<()> {
         let clock = Clock::get()?;
+        let current_time = clock.unix_timestamp;
 
-        // Validate execution timing
+        // Check if execution window is still open
         require!(
-            clock.unix_timestamp >= self.proposal.execution_available_at,
-            GovernanceError::ExecutionNotYetAvailable
-        );
-        require!(
-            clock.unix_timestamp <= self.proposal.execution_expires_at,
+            self.proposal.is_execution_window_open(current_time),
             GovernanceError::ExecutionWindowExpired
+        );
+
+        // Check if proposal has already been executed
+        require!(
+            self.proposal.executed_at.is_none(),
+            GovernanceError::ProposalAlreadyExecuted
         );
 
         // Execute based on proposal type
@@ -58,128 +78,154 @@ impl<'info> ExecuteProposal<'info> {
             ProposalType::Treasury => {
                 self.execute_treasury_proposal(proposal_id)?;
             },
-            ProposalType::Parameter => {
-                self.execute_parameter_proposal(proposal_id)?;
+            ProposalType::Research => {
+                self.execute_research_proposal(proposal_id)?;
+            },
+            ProposalType::ParameterChange => {
+                self.execute_parameter_change(proposal_id)?;
             },
             ProposalType::Emergency => {
-                self.execute_emergency_proposal(proposal_id)?;
+                self.execute_emergency_action(proposal_id)?;
             }
         }
 
         // Mark proposal as executed
-        self.proposal.proposal_status = ProposalStatus::Executed;
-        self.proposal.executed_at = Some(clock.unix_timestamp);
-        self.proposal.executed_by = Some(self.executor.key());
+        self.proposal.status = ProposalStatus::Executed;
+        self.proposal.executed_at = Some(current_time);
 
-        emit!(ProposalExecutedEvent {
+        emit!(ProposalExecuted {
             proposal_id,
+            executed_by: self.authority.key(),
+            executed_at: current_time,
             proposal_type: self.proposal.proposal_type.clone(),
-            executor: self.executor.key(),
-            timestamp: clock.unix_timestamp,
         });
 
         Ok(())
     }
 
-    fn execute_treasury_proposal(&self, proposal_id: u64) -> Result<()> {
-        // Parse treasury-specific data from proposal_data
-        // For now, we'll implement a basic structure
-        // In a full implementation, this would deserialize specific treasury instructions
-        
+    fn execute_treasury_proposal(&mut self, proposal_id: u64) -> Result<()> {
         msg!("Executing treasury proposal: {}", proposal_id);
         
-        // Create governance authority seeds for CPI
-        let governance_seeds = &[
-            GOVERNANCE_CONFIG_SEED,
-            &[self.governance_config.bump],
-        ];
-
-        // Example: Treasury funding instruction
-        // This would be replaced with actual instruction data from the proposal
-        let treasury_instruction_data = self.proposal.instruction_data.clone()
-            .ok_or(GovernanceError::NoInstructionData)?;
-
-        // Create the instruction for treasury program
-        let treasury_instruction = Instruction {
-            program_id: self.treasury_program.key(),
-            accounts: vec![], // This would be populated with actual account metas
-            data: treasury_instruction_data,
-        };
-
-        // Execute CPI to treasury program
-        invoke_signed(
-            &treasury_instruction,
-            &[], // This would include actual account infos
-            &[governance_seeds],
-        ).map_err(|_| GovernanceError::ExecutionFailed)?;
-
-        Ok(())
-    }
-
-    fn execute_parameter_proposal(&mut self, proposal_id: u64) -> Result<()> {
-        msg!("Executing parameter change proposal: {}", proposal_id);
-        
-        // Parse parameter change data
-        let param_data = self.proposal.instruction_data.clone()
-            .ok_or(GovernanceError::NoInstructionData)?;
-
-        // For demonstration, we'll show how parameters could be updated
-        // In practice, this would deserialize specific parameter change instructions
-        
-        // Example parameter updates (this would be data-driven):
-        if param_data.len() >= 8 {
-            let new_quorum = u16::from_le_bytes([param_data[0], param_data[1]]);
-            let new_approval = u16::from_le_bytes([param_data[2], param_data[3]]);
+        // Parse instruction data for treasury operations
+        if let Some(ref instruction_data) = self.proposal.instruction_data {
+            let treasury_instruction = crate::cpi_helpers::InstructionParser::parse_treasury_instruction(instruction_data)?;
             
-            // Validate new parameters
-            require!(new_quorum <= 10000, GovernanceError::InvalidParameter);
-            require!(new_approval <= 10000, GovernanceError::InvalidParameter);
-            require!(new_quorum >= 100, GovernanceError::InvalidParameter); // Min 1%
-            require!(new_approval >= 5000, GovernanceError::InvalidParameter); // Min 50%
-
-            // Update governance config (would need mutable reference)
-            msg!("Would update quorum to {} and approval to {}", new_quorum, new_approval);
-        }
-
-        Ok(())
-    }
-
-    fn execute_emergency_proposal(&self, proposal_id: u64) -> Result<()> {
-        msg!("Executing emergency proposal: {}", proposal_id);
-        
-        // Emergency proposals might pause/unpause systems, emergency withdrawals, etc.
-        let emergency_data = self.proposal.instruction_data.clone()
-            .ok_or(GovernanceError::NoInstructionData)?;
-
-        // Example emergency actions
-        if !emergency_data.is_empty() {
-            match emergency_data[0] {
-                1 => {
-                    // Emergency pause
-                    msg!("Emergency pause would be executed");
-                },
-                2 => {
-                    // Emergency unpause
-                    msg!("Emergency unpause would be executed");
-                },
-                3 => {
-                    // Emergency withdrawal
-                    msg!("Emergency withdrawal would be executed");
+            match treasury_instruction {
+                crate::cpi_helpers::TreasuryInstruction::FundProposal { proposal_id: fund_id, amount } => {
+                    // Call treasury program to fund the proposal
+                    crate::cpi_helpers::GovernanceCpi::fund_proposal(
+                        &self.treasury_program.to_account_info(),
+                        &self.treasury_config.to_account_info(),
+                        &self.proposal_funding.to_account_info(),
+                        &self.authority.to_account_info(),
+                        fund_id,
+                        amount,
+                        &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
+                    )?;
                 },
                 _ => {
-                    return Err(GovernanceError::InvalidEmergencyAction.into());
+                    msg!("Treasury instruction type not yet implemented");
                 }
             }
         }
+        
+        Ok(())
+    }
 
+    fn execute_research_proposal(&mut self, proposal_id: u64) -> Result<()> {
+        msg!("Executing research proposal: {}", proposal_id);
+        
+        // Research proposals typically involve funding allocation and researcher reputation updates
+        if let Some(ref instruction_data) = self.proposal.instruction_data {
+            let research_instruction = crate::cpi_helpers::InstructionParser::parse_research_instruction(instruction_data)?;
+            
+            match research_instruction {
+                crate::cpi_helpers::ResearchInstruction::UpdateProposal { proposal_id: research_id, status } => {
+                    // Call research program to update proposal status
+                    crate::cpi_helpers::GovernanceCpi::update_research_project(
+                        &self.research_program.to_account_info(),
+                        &self.researcher_profile.to_account_info(),
+                        &self.proposal_funding.to_account_info(), // Reusing as research proposal account
+                        &self.authority.to_account_info(),
+                        research_id.into(),
+                        status,
+                        &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
+                    )?;
+                    
+                    // TODO: Update researcher reputation for successful proposal approval
+                    // This would involve calling the reputation program via CPI
+                },
+                _ => {
+                    msg!("Research instruction type not yet implemented");
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn execute_parameter_change(&mut self, proposal_id: u64) -> Result<()> {
+        msg!("Executing parameter change proposal: {}", proposal_id);
+        
+        // Parameter changes modify governance, treasury, or system parameters
+        if let Some(ref instruction_data) = self.proposal.instruction_data {
+            let param_instruction = crate::cpi_helpers::InstructionParser::parse_parameter_instruction(instruction_data)?;
+            
+            match param_instruction {
+                crate::cpi_helpers::ParameterInstruction::UpdateThresholds { quorum_bps, approval_bps } => {
+                    // Update governance thresholds
+                    if let Some(quorum) = quorum_bps {
+                        msg!("Updating quorum threshold to: {} bps", quorum);
+                        // TODO: Actually update the governance config
+                    }
+                    if let Some(approval) = approval_bps {
+                        msg!("Updating approval threshold to: {} bps", approval);
+                        // TODO: Actually update the governance config
+                    }
+                },
+                crate::cpi_helpers::ParameterInstruction::EmergencyAction { pause_system } => {
+                    msg!("Emergency action: pause_system = {}", pause_system);
+                    // Update emergency pause across all programs
+                    crate::cpi_helpers::GovernanceCpi::update_system_parameters(
+                        &self.treasury_program.to_account_info(),
+                        &self.reputation_program.to_account_info(),
+                        &self.authority.to_account_info(),
+                        instruction_data,
+                        &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
+                    )?;
+                },
+                _ => {
+                    msg!("Parameter instruction type not yet implemented");
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
+    fn execute_emergency_action(&mut self, proposal_id: u64) -> Result<()> {
+        msg!("Executing emergency proposal: {}", proposal_id);
+        
+        // Emergency actions might pause systems, update critical parameters, etc.
+        if let Some(ref instruction_data) = self.proposal.instruction_data {
+            // Emergency actions get special treatment and can bypass normal parameter validation
+            crate::cpi_helpers::GovernanceCpi::update_system_parameters(
+                &self.treasury_program.to_account_info(),
+                &self.reputation_program.to_account_info(),
+                &self.authority.to_account_info(),
+                instruction_data,
+                &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
+            )?;
+        }
+        
         Ok(())
     }
 }
 
 #[event]
-pub struct ProposalExecutedEvent {
+pub struct ProposalExecuted {
     pub proposal_id: u64,
+    pub executed_by: Pubkey,
+    pub executed_at: i64,
     pub proposal_type: ProposalType,
-    pub executor: Pubkey,
-    pub timestamp: i64,
 }

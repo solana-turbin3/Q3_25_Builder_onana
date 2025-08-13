@@ -4,8 +4,11 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod cpi_helpers;
 
 use instructions::*;
+pub use constants::*;
+pub use cpi_helpers::*;
 
 declare_id!("FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR");
 
@@ -58,6 +61,7 @@ pub mod governance_dao {
             proposal_type,
             voting_period_days,
             instruction_data,
+            &ctx.bumps,
         )
     }
 
@@ -111,3 +115,4 @@ pub mod governance_dao {
         )
     }
 }
+

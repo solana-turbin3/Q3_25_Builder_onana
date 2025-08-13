@@ -5,111 +5,63 @@ pub enum GovernanceError {
     #[msg("Governance is currently paused")]
     GovernancePaused,
     
-    #[msg("Unauthorized access")]
-    Unauthorized,
+    #[msg("Proposal voting period has not ended")]
+    VotingPeriodActive,
     
-    #[msg("Invalid voting period")]
-    InvalidVotingPeriod,
+    #[msg("Proposal voting period has ended")]
+    VotingPeriodEnded,
     
-    #[msg("Invalid quorum threshold")]
-    InvalidQuorumThreshold,
+    #[msg("Proposal has not been approved")]
+    ProposalNotApproved,
     
-    #[msg("Invalid approval threshold")]
-    InvalidApprovalThreshold,
+    #[msg("Proposal execution window has expired")]
+    ExecutionWindowExpired,
     
-    #[msg("Invalid reputation weight")]
-    InvalidReputationWeight,
+    #[msg("Proposal has already been executed")]
+    ProposalAlreadyExecuted,
     
-    #[msg("Insufficient AGRO tokens to propose")]
+    #[msg("Insufficient AGRO tokens to create proposal")]
     InsufficientAgroToPropose,
     
     #[msg("Insufficient AGRO tokens to vote")]
     InsufficientAgroToVote,
     
+    #[msg("Proposal title too long")]
+    TitleTooLong,
+    
+    #[msg("Proposal description too long")]
+    DescriptionTooLong,
+    
+    #[msg("Instruction data too long")]
+    InstructionDataTooLong,
+    
+    #[msg("Invalid threshold value")]
+    InvalidThreshold,
+    
     #[msg("Proposal not found")]
     ProposalNotFound,
     
-    #[msg("Proposal not active")]
-    ProposalNotActive,
+    #[msg("Vote already cast")]
+    VoteAlreadyCast,
     
-    #[msg("Voting period has not started")]
-    VotingPeriodNotStarted,
-    
-    #[msg("Voting period has ended")]
-    VotingPeriodEnded,
-    
-    #[msg("Voting period is still active")]
-    VotingPeriodActive,
-    
-    #[msg("Already voted on this proposal")]
+    #[msg("User has already voted on this proposal")]
     AlreadyVoted,
     
-    #[msg("Proposal has not passed")]
-    ProposalNotPassed,
+    #[msg("Insufficient quorum to approve proposal")]
+    InsufficientQuorum,
     
-    #[msg("Proposal not ready for execution")]
-    NotReadyForExecution,
+    #[msg("Proposal did not meet approval threshold")]
+    InsufficientApproval,
     
-    #[msg("Proposal already executed")]
-    ProposalAlreadyExecuted,
+    #[msg("Unauthorized operation")]
+    Unauthorized,
     
-    #[msg("Execution delay not met")]
-    ExecutionDelayNotMet,
+    #[msg("Invalid voting period")]
+    InvalidVotingPeriod,
     
-    #[msg("Quorum not reached")]
-    QuorumNotReached,
-    
-    #[msg("Unsupported proposal type")]
-    UnsupportedProposalType,
-    
-    #[msg("Invalid proposal parameters")]
-    InvalidProposalParameters,
-    
-    #[msg("Title too long")]
-    TitleTooLong,
-    
-    #[msg("Description too long")]
-    DescriptionTooLong,
+    #[msg("Invalid token account")]
+    InvalidTokenAccount,
     
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
-    
-    #[msg("Arithmetic underflow")]
-    ArithmeticUnderflow,
-    
-    #[msg("Invalid timestamp")]
-    InvalidTimestamp,
-    
-    #[msg("Cross-program invocation failed")]
-    CpiCallFailed,
-    
-    #[msg("Proposal already tallied")]
-    ProposalAlreadyTallied,
-    
-    #[msg("Voting period not ended")]
-    VotingPeriodNotEnded,
-    
-    #[msg("Proposal not approved")]
-    ProposalNotApproved,
-    
-    #[msg("Execution not yet available")]
-    ExecutionNotYetAvailable,
-    
-    #[msg("Execution window expired")]
-    ExecutionWindowExpired,
-    
-    #[msg("Execution failed")]
-    ExecutionFailed,
-    
-    #[msg("No instruction data provided")]
-    NoInstructionData,
-    
-    #[msg("Invalid parameter")]
-    InvalidParameter,
-    
-    #[msg("Invalid emergency action")]
-    InvalidEmergencyAction,
-    
-    #[msg("Unauthorized governance update")]
-    UnauthorizedGovernanceUpdate,
 }

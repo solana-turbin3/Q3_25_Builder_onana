@@ -1,20 +1,19 @@
 use anchor_lang::prelude::*;
-use crate::state::GovernanceConfig;
+use crate::state::*;
 use crate::constants::*;
-use crate::error::GovernanceError;
+use crate::error::*;
 
 #[derive(Accounts)]
 pub struct UpdateGovernanceConfig<'info> {
-    #[account(mut)]
-    pub authority: Signer<'info>,
-
     #[account(
         mut,
-        seeds = [GOVERNANCE_CONFIG_SEED],
+        seeds = [GOVERNANCE_SEED],
         bump = governance_config.bump,
-        constraint = governance_config.governance_authority == authority.key() @ GovernanceError::UnauthorizedGovernanceUpdate
+        constraint = governance_config.governance_authority == authority.key() @ GovernanceError::Unauthorized
     )]
     pub governance_config: Account<'info, GovernanceConfig>,
+
+    pub authority: Signer<'info>,
 }
 
 impl<'info> UpdateGovernanceConfig<'info> {
@@ -31,35 +30,34 @@ impl<'info> UpdateGovernanceConfig<'info> {
     ) -> Result<()> {
         let clock = Clock::get()?;
 
-        // Validate parameter ranges before updating
-        if let Some(quorum) = new_quorum_threshold_bps {
-            require!(quorum >= 100 && quorum <= 10000, GovernanceError::InvalidParameter);
-            self.governance_config.quorum_threshold_bps = quorum;
+        // Validate and update thresholds if provided
+        if let Some(threshold) = new_quorum_threshold_bps {
+            require!(threshold <= BASIS_POINTS_MAX, GovernanceError::InvalidThreshold);
+            self.governance_config.quorum_threshold_bps = threshold;
         }
 
-        if let Some(approval) = new_approval_threshold_bps {
-            require!(approval >= 5000 && approval <= 10000, GovernanceError::InvalidParameter);
-            self.governance_config.approval_threshold_bps = approval;
+        if let Some(threshold) = new_approval_threshold_bps {
+            require!(threshold <= BASIS_POINTS_MAX, GovernanceError::InvalidThreshold);
+            self.governance_config.approval_threshold_bps = threshold;
         }
 
-        if let Some(param_threshold) = new_parameter_change_threshold_bps {
-            require!(param_threshold >= 6000 && param_threshold <= 10000, GovernanceError::InvalidParameter);
-            self.governance_config.parameter_change_threshold_bps = param_threshold;
+        if let Some(threshold) = new_parameter_change_threshold_bps {
+            require!(threshold <= BASIS_POINTS_MAX, GovernanceError::InvalidThreshold);
+            self.governance_config.parameter_change_threshold_bps = threshold;
         }
 
-        if let Some(min_propose) = new_min_agro_to_propose {
-            require!(min_propose >= 1000 * 10_u64.pow(6), GovernanceError::InvalidParameter); // Min 1000 AGRO
-            self.governance_config.min_agro_to_propose = min_propose;
+        if let Some(threshold) = new_max_reputation_weight_bps {
+            require!(threshold <= BASIS_POINTS_MAX, GovernanceError::InvalidThreshold);
+            self.governance_config.max_reputation_weight_bps = threshold;
         }
 
-        if let Some(min_vote) = new_min_agro_to_vote {
-            require!(min_vote >= 10 * 10_u64.pow(6), GovernanceError::InvalidParameter); // Min 10 AGRO
-            self.governance_config.min_agro_to_vote = min_vote;
+        // Update other parameters
+        if let Some(min_agro) = new_min_agro_to_propose {
+            self.governance_config.min_agro_to_propose = min_agro;
         }
 
-        if let Some(max_rep_weight) = new_max_reputation_weight_bps {
-            require!(max_rep_weight <= 5000, GovernanceError::InvalidParameter); // Max 50%
-            self.governance_config.max_reputation_weight_bps = max_rep_weight;
+        if let Some(min_agro) = new_min_agro_to_vote {
+            self.governance_config.min_agro_to_vote = min_agro;
         }
 
         if let Some(new_authority) = new_governance_authority {
@@ -70,18 +68,12 @@ impl<'info> UpdateGovernanceConfig<'info> {
             self.governance_config.emergency_pause = pause;
         }
 
-        self.governance_config.last_updated = clock.unix_timestamp;
+        self.governance_config.updated_at = clock.unix_timestamp;
 
-        emit!(GovernanceConfigUpdatedEvent {
-            authority: self.authority.key(),
-            quorum_threshold_bps: self.governance_config.quorum_threshold_bps,
-            approval_threshold_bps: self.governance_config.approval_threshold_bps,
-            parameter_change_threshold_bps: self.governance_config.parameter_change_threshold_bps,
-            min_agro_to_propose: self.governance_config.min_agro_to_propose,
-            min_agro_to_vote: self.governance_config.min_agro_to_vote,
-            max_reputation_weight_bps: self.governance_config.max_reputation_weight_bps,
-            emergency_pause: self.governance_config.emergency_pause,
-            timestamp: clock.unix_timestamp,
+        emit!(GovernanceConfigUpdated {
+            governance_config: self.governance_config.key(),
+            updated_by: self.authority.key(),
+            updated_at: clock.unix_timestamp,
         });
 
         Ok(())
@@ -89,14 +81,9 @@ impl<'info> UpdateGovernanceConfig<'info> {
 }
 
 #[event]
-pub struct GovernanceConfigUpdatedEvent {
-    pub authority: Pubkey,
-    pub quorum_threshold_bps: u16,
-    pub approval_threshold_bps: u16,
-    pub parameter_change_threshold_bps: u16,
-    pub min_agro_to_propose: u64,
-    pub min_agro_to_vote: u64,
-    pub max_reputation_weight_bps: u16,
-    pub emergency_pause: bool,
-    pub timestamp: i64,
+pub struct GovernanceConfigUpdated {
+    pub governance_config: Pubkey,
+    pub updated_by: Pubkey,
+    pub updated_at: i64,
 }
+

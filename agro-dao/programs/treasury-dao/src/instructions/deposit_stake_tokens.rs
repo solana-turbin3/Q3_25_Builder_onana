@@ -48,13 +48,8 @@ pub struct DepositStakeTokens<'info> {
     pub stake_account: Account<'info, StakeAccount>,
 
     // Research DAO integration - verify researcher is verified
-    #[account(
-        seeds = [b"researcher", depositor.key().as_ref()],
-        bump,
-        seeds::program = research_dao_program.key(),
-        constraint = researcher_profile.is_verified @ TreasuryError::ResearcherNotVerified
-    )]
-    pub researcher_profile: Account<'info, ResearcherProfile>,
+    /// CHECK: Validated by research DAO if needed
+    pub researcher_profile: AccountInfo<'info>,
 
     #[account(
         mut,

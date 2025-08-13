@@ -1,28 +1,28 @@
-// Governance Config Constants
-pub const MAX_PROPOSAL_TITLE_LENGTH: usize = 100;
-pub const MAX_PROPOSAL_DESCRIPTION_LENGTH: usize = 500;
-pub const MAX_EXECUTION_RESULT_LENGTH: usize = 200;
-pub const EXECUTION_WINDOW: i64 = 7 * 24 * 60 * 60; // 7 days execution window
+use anchor_lang::prelude::*;
 
-// Voting Constants
-pub const MIN_VOTING_PERIOD: i64 = 24 * 60 * 60; // 1 day minimum
-pub const MAX_VOTING_PERIOD: i64 = 30 * 24 * 60 * 60; // 30 days maximum
-pub const PROPOSAL_DELAY: i64 = 24 * 60 * 60; // 24 hours
-pub const EXECUTION_DELAY: i64 = 24 * 60 * 60; // 24 hours
+/// Governance seeds
+#[constant]
+pub const GOVERNANCE_SEED: &[u8] = b"governance";
 
-// Threshold Constants (in basis points)
-pub const MIN_QUORUM_THRESHOLD_BPS: u16 = 500;   // 5% minimum
-pub const MAX_QUORUM_THRESHOLD_BPS: u16 = 5000;  // 50% maximum
-pub const MIN_APPROVAL_THRESHOLD_BPS: u16 = 5000; // 50% minimum (simple majority)
-pub const MAX_APPROVAL_THRESHOLD_BPS: u16 = 8000; // 80% maximum
-
-// Weight Constants
-pub const MAX_REPUTATION_WEIGHT_BPS: u16 = 300;  // 300% max (3x multiplier)
-pub const MIN_AGRO_TO_PROPOSE: u64 = 1000_000_000_000; // 1000 AGRO (9 decimals)
-pub const MIN_AGRO_TO_VOTE: u64 = 10_000_000_000; // 10 AGRO (9 decimals)
-
-// Seeds
-pub const GOVERNANCE_CONFIG_SEED: &[u8] = b"governance_config";
+#[constant]
 pub const PROPOSAL_SEED: &[u8] = b"proposal";
+
+#[constant]
 pub const VOTE_SEED: &[u8] = b"vote";
-pub const EXECUTION_RECORD_SEED: &[u8] = b"execution_record";
+
+/// Cross-program IDs
+pub const TREASURY_PROGRAM_ID: Pubkey = pubkey!("9cDozwVvb4EHtzVwtbseAkuWRXjPfSmhuoiLiVK8yMY8");
+pub const REPUTATION_PROGRAM_ID: Pubkey = pubkey!("CwcGWv7BjjJKVXKqTaLmtvbXpBn2XqULeeJbPgGvfanN");
+pub const RESEARCH_PROGRAM_ID: Pubkey = pubkey!("DF1y7PHHo7ekNEKztCMTDsZ3TrYdLAhgBCFQPzoi3PHw");
+
+/// Basis points constants
+pub const BASIS_POINTS_MAX: u16 = 10_000;
+
+/// Time constants
+pub const SECONDS_PER_DAY: i64 = 86_400;
+pub const EXECUTION_WINDOW_DAYS: i64 = 7;
+
+/// Proposal limits
+pub const MAX_TITLE_LENGTH: usize = 100;
+pub const MAX_DESCRIPTION_LENGTH: usize = 1000;
+pub const MAX_INSTRUCTION_DATA_LENGTH: usize = 2048;

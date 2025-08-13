@@ -2,14 +2,16 @@ pub mod constants;
 pub mod error;
 pub mod instructions;
 pub mod state;
+pub mod research_dao_cpi;
 
 use anchor_lang::prelude::*;
 
 pub use constants::*;
 pub use instructions::*;
 pub use state::*;
+pub use research_dao_cpi::*;
 
-declare_id!("9B8K3XrYzqVvE2mhf4q1VX7bNzRtJ5AqG3pL6dFm8sWr");
+declare_id!("7jdb4RV2Wep32dBgAoprWvHTqKaCN9d6XWQ4NGtUbBpq");
 
 #[program]
 pub mod treasury_dao {
@@ -44,9 +46,10 @@ pub mod treasury_dao {
     pub fn fund_proposal(
         ctx: Context<FundProposal>,
         proposal_id: String,
+        proposal_id_u64: u64,
         amount: u64,
     ) -> Result<()> {
-        ctx.accounts.fund_proposal(proposal_id, amount, &ctx.bumps)
+        ctx.accounts.fund_proposal(proposal_id, proposal_id_u64, amount, &ctx.bumps)
     }
 
     // Fund Distribution
@@ -65,5 +68,5 @@ pub mod treasury_dao {
 
     pub fn emergency_unpause(ctx: Context<EmergencyUnpause>) -> Result<()> {
         ctx.accounts.emergency_unpause()
-    }
+    }   
 }

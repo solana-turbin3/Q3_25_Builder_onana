@@ -9,7 +9,12 @@ pub struct PublishMilestone<'info> {
         seeds = [b"proposal", research_proposal.researcher.key().as_ref(), research_proposal.id.to_le_bytes().as_ref()],
         bump = research_proposal.bump,
         has_one = researcher @ ErrorCode::UnauthorizedResearcher,       
-        constraint = research_proposal.status == ProposalStatus::InProgress @ ErrorCode::InvalidProposalStatus
+        // Allow publishing milestones once work has started. If the proposal
+        // is still in Draft it must be submitted first. Accept either
+        // SubmittedForFunding (first milestone will move it to InProgress)
+        // or already InProgress.
+        constraint = research_proposal.status == ProposalStatus::InProgress
+            || research_proposal.status == ProposalStatus::SubmittedForFunding @ ErrorCode::InvalidProposalStatus
     )]
     pub research_proposal: Account<'info, ResearchProposal>,
     
@@ -40,6 +45,11 @@ impl<'info> PublishMilestone<'info> {
             (milestone_index as usize) < self.research_proposal.milestones.len(),
             ErrorCode::InvalidMilestoneIndex
         );
+
+        // If this is the first milestone after submission, transition to InProgress
+        if self.research_proposal.status == ProposalStatus::SubmittedForFunding {
+            self.research_proposal.status = ProposalStatus::InProgress;
+        }
 
         let milestone = &mut self.research_proposal.milestones[milestone_index as usize];
         

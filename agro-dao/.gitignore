@@ -5,3 +5,22 @@ target
 node_modules
 test-ledger
 .yarn
+
+# Sensitive Files - DO NOT COMMIT
+*-keypair.json
+*.pem
+*.key
+.env
+.env.local
+.env.*.local
+
+# Solana specific
+id.json
+~/.config/solana/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db

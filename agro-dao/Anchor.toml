@@ -8,14 +8,22 @@ skip-lint = false
 [programs.localnet]
 agro_dao = "CRAooBpTSWbr3m5YKm2cEWAQcHgqqARmZXYj5Z1RSsX2"
 research_dao = "7eXMy1pAPuwGFSpRJA1YBmfQq7u2wxs27g7ko23VcxxD"
-treasury_dao = "9B8K3XrYzqVvE2mhf4q1VX7bNzRtJ5AqG3pL6dFm8sWr"
+reputation_dao = "HtzmTdZL8j5VSSDMSPYpwvHZLNCbP2b27KNxHzHi52Bw"
+treasury_dao = "7jdb4RV2Wep32dBgAoprWvHTqKaCN9d6XWQ4NGtUbBpq"
+governance_dao = "FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR"
+
+[programs.devnet]
+agro_dao = "5tBzz5Fi88JKejLdDx9XsWHyvwdMimQjvShwpR2mgKgU"
+research_dao = "DF1y7PHHo7ekNEKztCMTDsZ3TrYdLAhgBCFQPzoi3PHw"
+reputation_dao = "HtzmTdZL8j5VSSDMSPYpwvHZLNCbP2b27KNxHzHi52Bw"
+treasury_dao = "9cDozwVvb4EHtzVwtbseAkuWRXjPfSmhuoiLiVK8yMY8"
 governance_dao = "FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [test]

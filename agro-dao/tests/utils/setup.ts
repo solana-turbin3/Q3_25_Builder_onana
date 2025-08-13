@@ -49,3 +49,6 @@ export async function fundWallet(
 export async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Backward-compat alias used by some tests
+export const delay = sleep;

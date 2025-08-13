@@ -69,4 +69,13 @@ pub mod research_dao {
     ) -> Result<()> {
         ctx.accounts.publish_findings(findings_ipfs_hash)
     }
+
+    // Treasury DAO validation functions
+    pub fn validate_proposal_for_funding(
+        ctx: Context<ValidateProposalForFunding>,
+        proposal_id: u64,
+        funding_amount: u64,
+    ) -> Result<()> {
+        instructions::validate_proposal_for_funding(ctx, proposal_id, funding_amount)
+    }
 }

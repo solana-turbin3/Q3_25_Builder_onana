@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
-use crate::state::{GovernanceConfig, Proposal, ProposalType, ProposalStatus};
+use crate::state::*;
 use crate::constants::*;
-use crate::error::GovernanceError;
+use crate::error::*;
 
 #[derive(Accounts)]
-#[instruction(proposal_id: u64)]
 pub struct CreateProposal<'info> {
     #[account(
         mut,
-        seeds = [GOVERNANCE_CONFIG_SEED],
+        seeds = [GOVERNANCE_SEED],
         bump = governance_config.bump,
         constraint = !governance_config.emergency_pause @ GovernanceError::GovernancePaused
     )]
@@ -17,25 +15,23 @@ pub struct CreateProposal<'info> {
 
     #[account(
         init,
-        seeds = [PROPOSAL_SEED, &proposal_id.to_le_bytes()],
-        bump,
         payer = proposer,
-        space = 8 + Proposal::INIT_SPACE
+        space = 8 + Proposal::INIT_SPACE,
+        seeds = [PROPOSAL_SEED, &governance_config.total_proposals.to_le_bytes()],
+        bump
     )]
     pub proposal: Account<'info, Proposal>,
-
-    #[account(
-        constraint = proposer_agro_account.mint == governance_config.agro_token_mint @ GovernanceError::InsufficientAgroToPropose,
-        constraint = proposer_agro_account.owner == proposer.key() @ GovernanceError::InsufficientAgroToPropose,
-        constraint = proposer_agro_account.amount >= governance_config.min_agro_to_propose @ GovernanceError::InsufficientAgroToPropose
-    )]
-    pub proposer_agro_account: Account<'info, TokenAccount>,
 
     #[account(mut)]
     pub proposer: Signer<'info>,
 
+    /// CHECK: Proposer's AGRO token account, validated in instruction
+    pub proposer_agro_account: UncheckedAccount<'info>,
+
+    /// CHECK: AGRO token mint address
+    pub agro_token_mint: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> CreateProposal<'info> {
@@ -48,80 +44,66 @@ impl<'info> CreateProposal<'info> {
         proposal_type: ProposalType,
         voting_period_days: u8,
         instruction_data: Option<Vec<u8>>,
+        bumps: &CreateProposalBumps,
     ) -> Result<()> {
-        // Validate input lengths
-        require!(
-            title.len() <= MAX_PROPOSAL_TITLE_LENGTH,
-            GovernanceError::TitleTooLong
-        );
-        require!(
-            description.len() <= MAX_PROPOSAL_DESCRIPTION_LENGTH,
-            GovernanceError::DescriptionTooLong
-        );
+        require!(title.len() <= MAX_TITLE_LENGTH, GovernanceError::TitleTooLong);
+        require!(description.len() <= MAX_DESCRIPTION_LENGTH, GovernanceError::DescriptionTooLong);
+        
+        if let Some(ref data) = instruction_data {
+            require!(data.len() <= MAX_INSTRUCTION_DATA_LENGTH, GovernanceError::InstructionDataTooLong);
+        }
+        
+        require!(voting_period_days > 0 && voting_period_days <= 30, GovernanceError::InvalidVotingPeriod);
 
         let clock = Clock::get()?;
-
-        // Calculate timing
-        let voting_start_time = clock.unix_timestamp + PROPOSAL_DELAY;
-        let voting_end_time = voting_start_time + (voting_period_days as i64 * 24 * 60 * 60)
-            .clamp(MIN_VOTING_PERIOD, MAX_VOTING_PERIOD);
-
-        // Basic validation per type (minimal for now)
-        let _ = &proposal_type; // placeholder to mark use
+        let current_time = clock.unix_timestamp;
+        
+        let voting_starts_at = current_time;
+        let voting_ends_at = current_time + (voting_period_days as i64 * SECONDS_PER_DAY);
+        let execution_window_end = voting_ends_at + (EXECUTION_WINDOW_DAYS * SECONDS_PER_DAY);
 
         self.proposal.set_inner(Proposal {
-            bump,
             proposal_id,
+            bump: bumps.proposal, // Use the actual derived bump
             proposer: self.proposer.key(),
-            proposal_type: proposal_type.clone(),
             title: title.clone(),
-            description: description.clone(),
-            created_at: clock.unix_timestamp,
-            voting_start_time,
-            voting_end_time,
-            execution_available_at: 0,
-            execution_expires_at: 0,
-            proposal_status: ProposalStatus::Active,
-            total_votes_for: 0,
-            total_votes_against: 0,
-            total_abstain_votes: 0,
-            total_voters: 0,
-            quorum_reached: false,
-            instruction_data,
+            description,
+            proposal_type: proposal_type.clone(),
+            status: ProposalStatus::Active,
+            created_at: current_time,
+            voting_starts_at,
+            voting_ends_at,
+            execution_window_end,
+            yes_votes: 0,
+            no_votes: 0,
+            total_votes: 0,
+            total_voting_power: 0,
             executed_at: None,
-            executed_by: None,
-            failure_reason: None,
+            instruction_data,
         });
 
-        // Update governance config
-        self.governance_config.total_proposals_created = proposal_id;
+        // Increment total proposals
+        self.governance_config.total_proposals = self.governance_config.total_proposals
+            .checked_add(1)
+            .ok_or(GovernanceError::ArithmeticOverflow)?;
 
         emit!(ProposalCreated {
             proposal_id,
             proposer: self.proposer.key(),
-            proposal_type,
             title,
-            description,
-            voting_start_time,
-            voting_end_time,
-            timestamp: clock.unix_timestamp,
+            proposal_type,
+            voting_ends_at,
         });
 
         Ok(())
     }
-
-    // Placeholder for future rich validation per proposal type
-    // fn validate_proposal_type(&self, _proposal_type: &ProposalType) -> Result<()> { Ok(()) }
 }
 
 #[event]
 pub struct ProposalCreated {
     pub proposal_id: u64,
     pub proposer: Pubkey,
-    pub proposal_type: ProposalType,
     pub title: String,
-    pub description: String,
-    pub voting_start_time: i64,
-    pub voting_end_time: i64,
-    pub timestamp: i64,
+    pub proposal_type: ProposalType,
+    pub voting_ends_at: i64,
 }

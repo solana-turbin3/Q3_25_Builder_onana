@@ -13,7 +13,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
   before(async () => {
     setup = await setupTestEnvironment();
     pdaHelper = new PDAHelper(setup.researchDao.programId);
-    testHelpers = new TestHelpers(setup.researchDao);
+  testHelpers = new TestHelpers(setup);
   });
 
   describe("Protocol-Research Integration", () => {
@@ -26,7 +26,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
             protocolState: setup.protocolStatePda,
             authority: setup.authority.publicKey,
             systemProgram: anchor.web3.SystemProgram.programId,
-          })
+          } as any)
           .signers([setup.authority])
           .rpc();
       } catch {
@@ -43,14 +43,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       const researcher = Keypair.generate();
       await fundWallet(setup.provider, researcher.publicKey);
 
-      const [profilePda] = await testHelpers.createResearcherWithProfile(
-        researcher,
-        TEST_RESEARCHERS.ALICE
-      );
-      await testHelpers.verifyResearcher(profilePda, setup.authority);
+  const [profilePda] = await testHelpers.createResearcherWithProfile(researcher, TEST_RESEARCHERS.ALICE);
+  await testHelpers.verifyResearcher(profilePda, setup.authority);
 
       // Test proposal with funding below threshold (if implemented)
-      const [proposalPda] = pdaHelper.getResearchProposalPda(researcher.publicKey, 0);
+    const [proposalPda] = await pdaHelper.getNextProposalPdaFromProfile(setup.researchDao as any, researcher.publicKey, profilePda);
       const proposal = TEST_PROPOSALS.DROUGHT_RESISTANCE;
 
       await setup.researchDao.methods
@@ -60,20 +57,20 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           proposal.category,
           proposal.fundingGoal,
           proposal.duration,
-          proposal.ipfsHash,
-          proposal.milestones
+          proposal.milestones,
+          proposal.ipfsHash
         )
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
           researcher: researcher.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+        } as any)
         .signers([researcher])
         .rpc();
 
       const createdProposal = await setup.researchDao.account.researchProposal.fetch(proposalPda);
-      expect(createdProposal.fundingGoal.gte(protocolState.minFundingThreshold)).to.be.true;
+  expect(createdProposal.fundingTarget.gte(protocolState.minFundingThreshold)).to.be.true;
     });
 
     it("Should handle protocol updates affecting research operations", async () => {
@@ -89,11 +86,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           isPaused: null,
           newAuthority: null,
         })
-        .accounts({
+  .accounts({
           protocolState: setup.protocolStatePda,
           authority: setup.authority.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([setup.authority])
         .rpc();
 
@@ -111,7 +108,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       await testHelpers.verifyResearcher(profilePda, setup.authority);
 
       // Create proposal with funding goal meeting new threshold
-      const [proposalPda] = pdaHelper.getResearchProposalPda(researcher.publicKey, 0);
+    const [proposalPda] = await pdaHelper.getNextProposalPdaFromProfile(setup.researchDao as any, researcher.publicKey, profilePda);
       const proposal = {
         ...TEST_PROPOSALS.SOIL_HEALTH,
         fundingGoal: newThreshold.add(new anchor.BN(10000))
@@ -124,20 +121,20 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           proposal.category,
           proposal.fundingGoal,
           proposal.duration,
-          proposal.ipfsHash,
-          proposal.milestones
+          proposal.milestones,
+          proposal.ipfsHash
         )
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
           researcher: researcher.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+        } as any)
         .signers([researcher])
         .rpc();
 
       const createdProposal = await setup.researchDao.account.researchProposal.fetch(proposalPda);
-      expect(createdProposal.fundingGoal.gte(protocolStateAfter.minFundingThreshold)).to.be.true;
+  expect(createdProposal.fundingTarget.gte(protocolStateAfter.minFundingThreshold)).to.be.true;
     });
 
     it("Should handle protocol pause affecting research operations", async () => {
@@ -150,11 +147,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           isPaused: true,
           newAuthority: null,
         })
-        .accounts({
+  .accounts({
           protocolState: setup.protocolStatePda,
           authority: setup.authority.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([setup.authority])
         .rpc();
 
@@ -185,11 +182,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           isPaused: false,
           newAuthority: null,
         })
-        .accounts({
+  .accounts({
           protocolState: setup.protocolStatePda,
           authority: setup.authority.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([setup.authority])
         .rpc();
 
@@ -207,22 +204,22 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       await fundWallet(setup.provider, researcher.publicKey);
 
       // Create profile
-      const [profilePda] = await testHelpers.createResearcherWithProfile(
+  const [profilePda] = await testHelpers.createResearcherWithProfile(
         researcher,
-        TEST_RESEARCHERS.DAVID
+  TEST_RESEARCHERS.ALICE
       );
 
       // Authority should be able to verify researcher
       await testHelpers.verifyResearcher(profilePda, setup.authority);
 
-      const profile = await setup.researchDao.account.researcherProfile.fetch(profilePda);
-      expect(profile.verifiedBy.toString()).to.equal(setup.authority.publicKey.toString());
-      expect(profile.verifiedBy.toString()).to.equal(protocolState.authority.toString());
+  const profile = await setup.researchDao.account.researcherProfile.fetch(profilePda);
+  expect(profile.isVerified).to.equal(true);
     });
 
     it("Should handle authority transfer across programs", async () => {
-      const newAuthority = Keypair.generate();
+  const newAuthority = Keypair.generate();
       await fundWallet(setup.provider, newAuthority.publicKey);
+  const originalAuthority = setup.authority;
 
       // Transfer authority in protocol
       await setup.agroDao.methods
@@ -233,11 +230,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           isPaused: null,
           newAuthority: newAuthority.publicKey,
         })
-        .accounts({
+  .accounts({
           protocolState: setup.protocolStatePda,
           authority: setup.authority.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([setup.authority])
         .rpc();
 
@@ -256,10 +253,26 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       await testHelpers.verifyResearcher(profilePda, newAuthority);
 
       const profile = await setup.researchDao.account.researcherProfile.fetch(profilePda);
-      expect(profile.verifiedBy.toString()).to.equal(newAuthority.publicKey.toString());
+  expect(profile.isVerified).to.equal(true);
 
-      // Restore original authority for other tests
-      setup.authority = newAuthority;
+      // Restore original authority for other tests by transferring back
+      await setup.agroDao.methods
+        .updateProtocol({
+          minFundingThreshold: null,
+          researchProposalFee: null,
+          minimumStakedAmount: null,
+          isPaused: null,
+          newAuthority: originalAuthority.publicKey,
+        })
+        .accounts({
+          protocolState: setup.protocolStatePda,
+          authority: newAuthority.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
+        .signers([newAuthority])
+        .rpc();
+
+      setup.authority = originalAuthority;
     });
   });
 
@@ -286,31 +299,28 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           proposal.category,
           proposal.fundingGoal,
           proposal.duration,
-          proposal.ipfsHash,
-          proposal.milestones
+          proposal.milestones,
+          proposal.ipfsHash
         )
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
           researcher: researcher.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+        } as any)
         .signers([researcher])
         .rpc();
 
-      // Fund proposal
-      const funder = Keypair.generate();
-      await fundWallet(setup.provider, funder.publicKey, 10);
-
+      // Submit proposal for funding (no args per IDL)
       await setup.researchDao.methods
-        .submitProposalForFunding(proposal.fundingGoal)
+        .submitProposalForFunding()
         .accounts({
           researchProposal: proposalPda,
-          funder: funder.publicKey,
+          researcherProfile: profilePda,
           researcher: researcher.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .signers([funder])
+        } as any)
+        .signers([researcher])
         .rpc();
 
       // Verify state consistency
@@ -321,9 +331,8 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       // Check that cross-references are consistent
       expect(finalProposal.researcher.toString()).to.equal(researcher.publicKey.toString());
       expect(finalProfile.researcher.toString()).to.equal(researcher.publicKey.toString());
-      expect(finalProfile.verifiedBy.toString()).to.equal(protocolState.authority.toString());
-      expect(finalProfile.fundedProposals).to.equal(1);
-      expect(finalProfile.totalFundingReceived.toString()).to.equal(proposal.fundingGoal.toString());
+  expect(finalProfile.isVerified).to.equal(true);
+  expect(finalProposal.status).to.deep.equal({ submittedForFunding: {} });
     });
 
     it("Should handle concurrent operations across programs", async () => {
@@ -338,11 +347,11 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           isPaused: null,
           newAuthority: null,
         })
-        .accounts({
+  .accounts({
           protocolState: setup.protocolStatePda,
           authority: setup.authority.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([setup.authority])
         .rpc();
 
@@ -379,7 +388,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       for (let i = 1; i < results.length; i++) {
         if (results[i] instanceof anchor.web3.PublicKey) {
           const profile = await setup.researchDao.account.researcherProfile.fetch(results[i] as anchor.web3.PublicKey);
-          expect(profile.verificationStatus).to.deep.equal({ verified: {} });
+          expect(profile.isVerified).to.equal(true);
         }
       }
     });
@@ -390,11 +399,17 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       const events: string[] = [];
 
       // Protocol event
+      const stateBefore = await setup.agroDao.account.protocolState.fetch(setup.protocolStatePda);
+      const targetMinStaked = new anchor.BN(100000);
+      const newMinStaked = stateBefore.minimumStakedAmount.eq(targetMinStaked)
+        ? targetMinStaked.add(new anchor.BN(1))
+        : targetMinStaked;
+
       await setup.agroDao.methods
         .updateProtocol({
           minFundingThreshold: null,
           researchProposalFee: null,
-          minimumStakedAmount: new anchor.BN(100000),
+          minimumStakedAmount: newMinStaked,
           isPaused: null,
           newAuthority: null,
         })
@@ -422,7 +437,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
       events.push("Researcher Verified");
 
       // Create proposal
-      const proposal = TEST_PROPOSALS.CLIMATE_ADAPTATION;
+  const proposal = TEST_PROPOSALS.SOIL_HEALTH;
       const [proposalPda] = pdaHelper.getResearchProposalPda(researcher.publicKey, 0);
 
       await setup.researchDao.methods
@@ -432,15 +447,15 @@ describe("Integration Tests - Cross-Program Interactions", () => {
           proposal.category,
           proposal.fundingGoal,
           proposal.duration,
-          proposal.ipfsHash,
-          proposal.milestones
+          proposal.milestones,
+          proposal.ipfsHash
         )
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
           researcher: researcher.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
-        })
+  } as any)
         .signers([researcher])
         .rpc();
 
@@ -458,9 +473,9 @@ describe("Integration Tests - Cross-Program Interactions", () => {
         "Research Proposal Created"
       ]);
 
-      expect(finalProtocolState.minimumStakedAmount.toNumber()).to.equal(100000);
-      expect(finalProfile.verificationStatus).to.deep.equal({ verified: {} });
-      expect(finalProposal.status).to.deep.equal({ pending: {} });
+  expect(finalProtocolState.minimumStakedAmount.toString()).to.equal(newMinStaked.toString());
+  expect(finalProfile.isVerified).to.equal(true);
+  expect(finalProposal.status).to.deep.equal({ draft: {} });
 
       console.log("Event sequence:", events);
       console.log("✓ Event ordering and state synchronization verified");

@@ -1,21 +1,24 @@
 use anchor_lang::prelude::*;
-use crate::state::GovernanceConfig;
+use crate::state::*;
 use crate::constants::*;
-use crate::error::GovernanceError;
+use crate::error::*;
 
 #[derive(Accounts)]
 pub struct InitializeGovernance<'info> {
     #[account(
         init,
-        seeds = [GOVERNANCE_CONFIG_SEED],
-        bump,
-        payer = initializer,
-        space = 8 + GovernanceConfig::INIT_SPACE
+        payer = authority,
+        space = 8 + GovernanceConfig::INIT_SPACE,
+        seeds = [GOVERNANCE_SEED],
+        bump
     )]
     pub governance_config: Account<'info, GovernanceConfig>,
 
     #[account(mut)]
-    pub initializer: Signer<'info>,
+    pub authority: Signer<'info>,
+
+    /// CHECK: AGRO token mint address, validated in instruction
+    pub agro_token_mint: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -33,53 +36,48 @@ impl<'info> InitializeGovernance<'info> {
         min_agro_to_vote: u64,
         max_reputation_weight_bps: u16,
     ) -> Result<()> {
-        let clock = Clock::get()?;
+        // Validate thresholds
+        require!(
+            quorum_threshold_bps <= BASIS_POINTS_MAX,
+            GovernanceError::InvalidThreshold
+        );
+        require!(
+            approval_threshold_bps <= BASIS_POINTS_MAX,
+            GovernanceError::InvalidThreshold
+        );
+        require!(
+            parameter_change_threshold_bps <= BASIS_POINTS_MAX,
+            GovernanceError::InvalidThreshold
+        );
+        require!(
+            max_reputation_weight_bps <= BASIS_POINTS_MAX,
+            GovernanceError::InvalidThreshold
+        );
 
-        // Validate thresholds and params
-        require!(
-            quorum_threshold_bps >= MIN_QUORUM_THRESHOLD_BPS && quorum_threshold_bps <= MAX_QUORUM_THRESHOLD_BPS,
-            GovernanceError::InvalidQuorumThreshold
-        );
-        require!(
-            approval_threshold_bps >= MIN_APPROVAL_THRESHOLD_BPS && approval_threshold_bps <= MAX_APPROVAL_THRESHOLD_BPS,
-            GovernanceError::InvalidApprovalThreshold
-        );
-        require!(
-            parameter_change_threshold_bps >= MIN_APPROVAL_THRESHOLD_BPS && parameter_change_threshold_bps <= MAX_APPROVAL_THRESHOLD_BPS,
-            GovernanceError::InvalidApprovalThreshold
-        );
-        require!(min_agro_to_propose >= MIN_AGRO_TO_PROPOSE, GovernanceError::InvalidProposalParameters);
-        require!(min_agro_to_vote >= MIN_AGRO_TO_VOTE, GovernanceError::InvalidProposalParameters);
-        require!(max_reputation_weight_bps <= MAX_REPUTATION_WEIGHT_BPS, GovernanceError::InvalidReputationWeight);
+        let clock = Clock::get()?;
+        let current_time = clock.unix_timestamp;
 
         self.governance_config.set_inner(GovernanceConfig {
             bump,
-            governance_authority,
             agro_token_mint,
-            treasury_program_id: Pubkey::default(),
-            research_program_id: Pubkey::default(),
-            min_agro_to_propose,
-            min_agro_to_vote,
+            governance_authority,
             quorum_threshold_bps,
             approval_threshold_bps,
             parameter_change_threshold_bps,
+            min_agro_to_propose,
+            min_agro_to_vote,
             max_reputation_weight_bps,
+            total_proposals: 0,
             emergency_pause: false,
-            total_proposals_created: 0,
-            created_at: clock.unix_timestamp,
-            last_updated: clock.unix_timestamp,
+            created_at: current_time,
+            updated_at: current_time,
         });
 
-        emit!(GovernanceConfigInitializedEvent {
-            governance_authority,
+        emit!(GovernanceInitialized {
+            governance_config: self.governance_config.key(),
             agro_token_mint,
-            quorum_threshold_bps,
-            approval_threshold_bps,
-            parameter_change_threshold_bps,
-            min_agro_to_propose,
-            min_agro_to_vote,
-            max_reputation_weight_bps,
-            timestamp: clock.unix_timestamp,
+            governance_authority,
+            initialized_at: current_time,
         });
 
         Ok(())
@@ -87,14 +85,10 @@ impl<'info> InitializeGovernance<'info> {
 }
 
 #[event]
-pub struct GovernanceConfigInitializedEvent {
-    pub governance_authority: Pubkey,
+pub struct GovernanceInitialized {
+    pub governance_config: Pubkey,
     pub agro_token_mint: Pubkey,
-    pub quorum_threshold_bps: u16,
-    pub approval_threshold_bps: u16,
-    pub parameter_change_threshold_bps: u16,
-    pub min_agro_to_propose: u64,
-    pub min_agro_to_vote: u64,
-    pub max_reputation_weight_bps: u16,
-    pub timestamp: i64,
+    pub governance_authority: Pubkey,
+    pub initialized_at: i64,
 }
+
