@@ -11,7 +11,8 @@ pub use instructions::*;
 pub use state::*;
 pub use research_dao_cpi::*;
 
-declare_id!("7jdb4RV2Wep32dBgAoprWvHTqKaCN9d6XWQ4NGtUbBpq");
+declare_id!("BT9K4n1w56VP6pL9fAwZesLCJWJ9rmaJ2d3XZxGuGkYB");
+
 
 #[program]
 pub mod treasury_dao {

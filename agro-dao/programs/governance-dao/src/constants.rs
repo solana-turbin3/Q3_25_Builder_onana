@@ -11,9 +11,9 @@ pub const PROPOSAL_SEED: &[u8] = b"proposal";
 pub const VOTE_SEED: &[u8] = b"vote";
 
 /// Cross-program IDs
-pub const TREASURY_PROGRAM_ID: Pubkey = pubkey!("9cDozwVvb4EHtzVwtbseAkuWRXjPfSmhuoiLiVK8yMY8");
-pub const REPUTATION_PROGRAM_ID: Pubkey = pubkey!("CwcGWv7BjjJKVXKqTaLmtvbXpBn2XqULeeJbPgGvfanN");
-pub const RESEARCH_PROGRAM_ID: Pubkey = pubkey!("DF1y7PHHo7ekNEKztCMTDsZ3TrYdLAhgBCFQPzoi3PHw");
+pub const TREASURY_PROGRAM_ID: Pubkey = pubkey!("BT9K4n1w56VP6pL9fAwZesLCJWJ9rmaJ2d3XZxGuGkYB");
+pub const REPUTATION_PROGRAM_ID: Pubkey = pubkey!("WZ13w2w964gyDhpd3GWpFuCJQWYaGNAgybt3rrrUuxD");
+pub const RESEARCH_PROGRAM_ID: Pubkey = pubkey!("FUpDQNRZyx2u8uEnerDP9Y6gRT4HUaTZcU7ViziYxWQp");
 
 /// Basis points constants
 pub const BASIS_POINTS_MAX: u16 = 10_000;

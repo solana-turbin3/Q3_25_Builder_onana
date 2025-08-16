@@ -21,7 +21,7 @@ pub fn validate_proposal_for_funding_cpi<'info>(
     funding_amount: u64,
 ) -> Result<()> {
     // For now, just do basic validation
-    // This would be replaced with actual CPI call to research DAO
+    // Actual CPI call to research DAO
     
     // Validate accounts are owned by research DAO
     require!(

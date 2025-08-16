@@ -54,7 +54,7 @@ impl<'info> EmergencyUnpause<'info> {
     pub fn emergency_unpause(&mut self) -> Result<()> {
         let clock = Clock::get()?;
         
-        // Check if minimum pause duration has passed (optional safety measure)
+        // Check if minimum pause duration has passed 
         let pause_duration = clock.unix_timestamp - self.treasury_config.emergency_pause_timestamp;
         require!(
             pause_duration >= 3600, // Minimum 1 hour pause

@@ -37,6 +37,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
   let user2Vote1Pda: anchor.web3.PublicKey;
   let reputationConfigPda: anchor.web3.PublicKey;
   let user1ReputationPda: anchor.web3.PublicKey;
+  let user2ReputationPda: anchor.web3.PublicKey;
 
   const PROPOSAL_1_ID = new BN(1);
   const PROPOSAL_2_ID = new BN(2);
@@ -46,7 +47,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
   let actualProposal2Id: anchor.BN;
 
   before(async () => {
-    console.log("🏛️ Setting up Governance DAO test environment...");
+    console.log("Setting up Governance DAO test environment...");
     
     // Airdrop SOL to test users
     await provider.connection.requestAirdrop(testUser1.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
@@ -119,16 +120,21 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
     // Derive reputation PDAs (for reputation program interactions)
     [reputationConfigPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("config")],
+      [Buffer.from("reputation_config")],
       new anchor.web3.PublicKey(REPUTATION_PROGRAM_ID)
     );
 
     [user1ReputationPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from("reputation"), testUser1.publicKey.toBuffer()],
+      [Buffer.from("user_reputation"), testUser1.publicKey.toBuffer()],
       new anchor.web3.PublicKey(REPUTATION_PROGRAM_ID)
     );
 
-    console.log("✅ Test environment setup complete");
+    [user2ReputationPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("user_reputation"), testUser2.publicKey.toBuffer()],
+      new anchor.web3.PublicKey(REPUTATION_PROGRAM_ID)
+    );
+
+    console.log("Test environment setup complete");
     console.log("📍 AGRO Mint:", agroMint.toString());
     console.log("📍 Governance Config PDA:", governanceConfigPda.toString());
     console.log("📍 Program ID:", program.programId.toString());
@@ -136,7 +142,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
   describe("Governance System Initialization", () => {
     it("should initialize governance config with proper parameters", async () => {
-      console.log("🔧 Initializing governance configuration...");
+      console.log("Initializing governance configuration...");
       
       try {
         // First check if governance is already initialized
@@ -146,8 +152,8 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         try {
           configAccount = await program.account.governanceConfig.fetch(governanceConfigPda);
           isAlreadyInitialized = true;
-          console.log("ℹ️ Governance already initialized, using existing configuration");
-          console.log("📊 Existing Config:", {
+          console.log("ℹGovernance already initialized, using existing configuration");
+          console.log("Existing Config:", {
             governanceAuthority: configAccount.governanceAuthority.toString(),
             agroTokenMint: configAccount.agroTokenMint.toString(),
             totalProposals: configAccount.totalProposals.toString(),
@@ -178,6 +184,34 @@ describe("Governance DAO - Comprehensive Functionality", () => {
             testUser2.publicKey
           )).address;
           
+          // Mint tokens to the accounts with the existing mint
+          await mintTo(
+            provider.connection,
+            authority.payer,
+            agroMint,
+            authorityTokenAccount,
+            authority.payer,
+            10000000 * 1e6 // 10M AGRO tokens
+          );
+
+          await mintTo(
+            provider.connection,
+            authority.payer,
+            agroMint,
+            user1TokenAccount,
+            authority.payer,
+            1000000 * 1e6 // 1M AGRO tokens
+          );
+
+          await mintTo(
+            provider.connection,
+            authority.payer,
+            agroMint,
+            user2TokenAccount,
+            authority.payer,
+            500000 * 1e6 // 500K AGRO tokens
+          );
+          
         } catch (fetchError) {
           // Governance not initialized yet, proceed with initialization
           console.log("🆕 Governance not initialized, proceeding with initialization");
@@ -205,10 +239,10 @@ describe("Governance DAO - Comprehensive Functionality", () => {
             .rpc();
 
           configAccount = await program.account.governanceConfig.fetch(governanceConfigPda);
-          console.log("✅ Governance initialized successfully");
+          console.log("Governance initialized successfully");
         }
         
-        console.log("📊 Final Config:", {
+        console.log("Final Config:", {
           agroTokenMint: configAccount.agroTokenMint.toString(),
           governance_authority: configAccount.governanceAuthority.toString(),
           quorum_threshold_bps: configAccount.quorumThresholdBps,
@@ -223,9 +257,90 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(configAccount.governanceAuthority.toString()).to.equal(authority.publicKey.toString());
         expect(configAccount.totalProposals.toNumber()).to.be.greaterThanOrEqual(0);
         expect(configAccount.emergencyPause).to.be.false;
+        
+        // Initialize reputation system for voting functionality
+        console.log("Initializing reputation system for governance...");
+        try {
+          // Type the reputation program explicitly to avoid deep instantiation
+          const reputationProgram = anchor.workspace.ReputationDao as any;
+          
+          // Check if reputation config already exists
+          let reputationConfigExists = false;
+          try {
+            await reputationProgram.account.reputationConfig.fetch(reputationConfigPda);
+            reputationConfigExists = true;
+            console.log("ℹReputation system already initialized");
+          } catch (fetchError) {
+            console.log("Reputation config not found, initializing...");
+          }
+          
+          if (!reputationConfigExists) {
+            const initMethod = reputationProgram.methods.initializeReputationConfig(
+              null, // Use default bronze threshold
+              null, // Use default silver threshold  
+              null, // Use default gold threshold
+              null, // Use default platinum threshold
+              null  // Use default diamond threshold
+            );
+            
+            await initMethod
+              .accounts({
+                reputationConfig: reputationConfigPda,
+                authority: authority.publicKey,
+                systemProgram: anchor.web3.SystemProgram.programId,
+              })
+              .rpc();
+            
+            console.log("Reputation system initialized for governance");
+          }
+
+          // Initialize user reputation accounts for test users
+          try {
+            const userInitMethod = reputationProgram.methods.initializeUserReputation();
+            
+            await userInitMethod
+              .accounts({
+                reputationConfig: reputationConfigPda,
+                userReputation: user1ReputationPda,
+                user: testUser1.publicKey,
+                authority: authority.publicKey,
+                systemProgram: anchor.web3.SystemProgram.programId,
+              })
+              .rpc();
+            console.log("User 1 reputation account initialized");
+          } catch (err: any) {
+            if (!err.message?.includes("already in use")) {
+              console.log("⚠User 1 reputation init failed:", err.message);
+            }
+          }
+
+          // Initialize user 2 reputation account
+          try {
+            const user2InitMethod = reputationProgram.methods.initializeUserReputation();
+            
+            await user2InitMethod
+              .accounts({
+                reputationConfig: reputationConfigPda,
+                userReputation: user2ReputationPda,
+                user: testUser2.publicKey,
+                authority: authority.publicKey,
+                systemProgram: anchor.web3.SystemProgram.programId,
+              })
+              .rpc();
+            console.log("User 2 reputation account initialized");
+          } catch (err: any) {
+            if (!err.message?.includes("already in use")) {
+              console.log("⚠User 2 reputation init failed:", err.message);
+            }
+          }
+
+        } catch (err: any) {
+          console.log("⚠Reputation initialization failed:", err.message);
+          // Don't throw - governance can work without reputation
+        }
 
       } catch (error) {
-        console.error("❌ Initialization failed:", error);
+        console.error("Initialization failed:", error);
         throw error;
       }
     });
@@ -233,14 +348,14 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
   describe("Proposal Management", () => {
     it("should create treasury proposal successfully", async () => {
-      console.log("📝 Creating treasury proposal...");
+      console.log("Creating treasury proposal...");
       
       try {
         // Get current total proposals to see how many exist
         const configAccount = await program.account.governanceConfig.fetch(governanceConfigPda);
         const totalProposals = configAccount.totalProposals.toNumber();
         
-        console.log("📊 Current state:", {
+        console.log("Current state:", {
           totalProposals: totalProposals,
           lookingForTreasuryProposal: true
         });
@@ -264,7 +379,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
               proposal1Pda = testPda;
               actualProposal1Id = new BN(id);
               foundTreasuryProposal = true;
-              console.log("✅ Found existing treasury proposal with ID:", id);
+              console.log("Found existing treasury proposal with ID:", id);
               break;
             }
           } catch (e) {
@@ -304,12 +419,12 @@ describe("Governance DAO - Comprehensive Functionality", () => {
             })
             .rpc();
             
-          console.log("✅ Treasury proposal created successfully");
+          console.log("Treasury proposal created successfully");
           proposalAccount = await program.account.proposal.fetch(proposal1Pda);
         }
         
-        console.log("✅ Treasury proposal created successfully");
-        console.log("📋 Proposal details:", {
+        console.log("Treasury proposal created successfully");
+        console.log("Proposal details:", {
           proposalId: proposalAccount.proposalId.toString(),
           title: proposalAccount.title,
           proposer: proposalAccount.proposer.toString(),
@@ -326,20 +441,20 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(proposalAccount.noVotes.toString()).to.equal("0");
 
       } catch (error) {
-        console.error("❌ Treasury proposal creation failed:", error);
+        console.error("Treasury proposal creation failed:", error);
         throw error;
       }
     });
 
     it("should create research proposal successfully", async () => {
-      console.log("📝 Creating research proposal...");
+      console.log("Creating research proposal...");
       
       try {
         // Get current total proposals to see how many exist
         const configAccount = await program.account.governanceConfig.fetch(governanceConfigPda);
         const totalProposals = configAccount.totalProposals.toNumber();
         
-        console.log("📊 Current state for research proposal:", {
+        console.log("Current state for research proposal:", {
           totalProposals: totalProposals,
           lookingForResearchProposal: true
         });
@@ -362,7 +477,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
               proposal2Pda = testPda;
               actualProposal2Id = new BN(id);
               foundResearchProposal = true;
-              console.log("✅ Found existing research proposal with ID:", id);
+              console.log("Found existing research proposal with ID:", id);
               break;
             }
           } catch (e) {
@@ -402,12 +517,12 @@ describe("Governance DAO - Comprehensive Functionality", () => {
             })
             .rpc();
             
-          console.log("✅ Research proposal created successfully");
+          console.log("Research proposal created successfully");
           proposalAccount = await program.account.proposal.fetch(proposal2Pda);
         }
         
-        console.log("✅ Research proposal created successfully");
-        console.log("📋 Proposal details:", {
+        console.log("Research proposal created successfully");
+        console.log("Proposal details:", {
           proposalId: proposalAccount.proposalId.toString(),
           title: proposalAccount.title,
           proposalType: proposalAccount.proposalType,
@@ -430,7 +545,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         );
 
       } catch (error) {
-        console.error("❌ Research proposal creation failed:", error);
+        console.error("Research proposal creation failed:", error);
         throw error;
       }
     });
@@ -438,7 +553,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
   describe("Voting System", () => {
     it("should allow users to cast votes on proposals", async () => {
-      console.log("🗳️ Testing voting functionality...");
+      console.log("🗳Testing voting functionality...");
       
       try {
         // Use the proposal1Pda that was found/created during setup, not re-derived
@@ -479,7 +594,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
           .signers([testUser1])
           .rpc();
 
-        console.log("✅ User 1 vote cast successfully");
+        console.log("User 1 vote cast successfully");
 
         // Second user votes - also use the original PDA
         await program.methods
@@ -497,19 +612,19 @@ describe("Governance DAO - Comprehensive Functionality", () => {
             agroTokenMint: agroMint,
             reputationProgram: new anchor.web3.PublicKey(REPUTATION_PROGRAM_ID),
             reputationConfig: reputationConfigPda,
-            userReputation: user1ReputationPda, // Using user1 reputation as user2 may not have one
+            userReputation: user2ReputationPda, // Using user2 reputation PDA for user2's vote
             systemProgram: anchor.web3.SystemProgram.programId,
           })
           .signers([testUser2])
           .rpc();
 
-        console.log("✅ User 2 vote cast successfully");
+        console.log("User 2 vote cast successfully");
 
         // Fetch vote records
         const user1Vote = await program.account.vote.fetch(user1Vote1Pda);
         const user2Vote = await program.account.vote.fetch(user2Vote1Pda);
         
-        console.log("📊 Vote records:", {
+        console.log("Vote records:", {
           user1Vote: user1Vote.voteChoice,
           user1VotingPower: user1Vote.votingPower.toString(),
           user2Vote: user2Vote.voteChoice,
@@ -528,7 +643,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(user2Vote.votingPower.toNumber()).to.be.greaterThan(0);
 
       } catch (error) {
-        console.error("❌ Voting failed:", error);
+        console.error("Voting failed:", error);
         throw error;
       }
     });
@@ -550,8 +665,8 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
         const proposalAccount = await program.account.proposal.fetch(proposal1Pda);
         
-        console.log("✅ Votes tallied successfully");
-        console.log("📊 Tally results:", {
+        console.log("Votes tallied successfully");
+        console.log("Tally results:", {
           yesVotes: proposalAccount.yesVotes.toString(),
           noVotes: proposalAccount.noVotes.toString(),
           totalVotes: proposalAccount.totalVotes.toString(),
@@ -564,22 +679,22 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(proposalAccount.totalVotes.toNumber()).to.be.greaterThanOrEqual(0);
 
       } catch (error) {
-        console.error("❌ Vote tallying failed:", error);
+        console.error("Vote tallying failed:", error);
         // This might fail if voting period hasn't ended yet, which is expected in tests
-        console.log("ℹ️ This might be expected if voting period hasn't ended");
+        console.log("ℹThis might be expected if voting period hasn't ended");
       }
     });
   });
 
   describe("Cross-Program Integration", () => {
     it("should verify governance interactions with other programs", async () => {
-      console.log("🔗 Testing cross-program integration...");
+      console.log("Testing cross-program integration...");
       
       // Test governance config accessibility
       const governanceConfig = await program.account.governanceConfig.fetch(governanceConfigPda);
       
-      console.log("✅ Cross-program integration verified");
-      console.log("📊 Integration status:", {
+      console.log("Cross-program integration verified");
+      console.log("Integration status:", {
         governanceAuthority: governanceConfig.governanceAuthority.toString(),
         agroTokenMint: governanceConfig.agroTokenMint.toString(),
         totalProposals: governanceConfig.totalProposals.toString(),
@@ -591,7 +706,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
       expect(governanceConfig.totalProposals.toNumber()).to.be.greaterThanOrEqual(2);
       expect(governanceConfig.emergencyPause).to.be.false;
       
-      console.log("✅ All cross-program integration tests passed");
+      console.log("All cross-program integration tests passed");
     });
   });
 
@@ -628,7 +743,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(true).to.be.false;
         
       } catch (error) {
-        console.log("✅ Correctly rejected re-initialization");
+        console.log("Correctly rejected re-initialization");
         expect(error).to.exist;
       }
     });
@@ -665,7 +780,7 @@ describe("Governance DAO - Comprehensive Functionality", () => {
         expect(true).to.be.false;
         
       } catch (error) {
-        console.log("✅ Correctly rejected invalid proposal parameters");
+        console.log("Correctly rejected invalid proposal parameters");
         expect(error).to.exist;
       }
     });
@@ -673,6 +788,6 @@ describe("Governance DAO - Comprehensive Functionality", () => {
 
   after(async () => {
     console.log("🧹 Cleaning up test environment...");
-    console.log("✅ Governance DAO tests completed successfully!");
+    console.log("Governance DAO tests completed successfully!");
   });
 });

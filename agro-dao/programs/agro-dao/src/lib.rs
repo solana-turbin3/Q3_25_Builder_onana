@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("CRAooBpTSWbr3m5YKm2cEWAQcHgqqARmZXYj5Z1RSsX2");
+declare_id!("HWjwngNibn1coAzqLZhg4huw5pH5gNZY8zxJaK7s3Hbj");
 
 #[program]
 pub mod agro_dao {

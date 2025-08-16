@@ -4,24 +4,24 @@ import { expect } from "chai";
 
 describe("Treasury DAO - Program Structure Validation", () => {
   it("should have treasury program available in workspace", () => {
-    console.log("🔍 Checking treasury program availability...");
+    console.log("Checking treasury program availability...");
     
     try {
       // This validates that the treasury program is properly built and available
       const treasuryProgram = anchor.workspace.TreasuryDao;
       expect(treasuryProgram).to.exist;
       
-      console.log("✅ Treasury program is available in workspace");
+      console.log("Treasury program is available in workspace");
       console.log("📍 Program ID:", treasuryProgram.programId?.toString() || "Not loaded");
       
     } catch (error) {
-      console.log("❌ Treasury program validation failed:", error.message);
+      console.log("Treasury program validation failed:", error.message);
       throw error;
     }
   });
 
   it("should have correct program configuration", () => {
-    console.log("🏗️ Validating treasury program structure...");
+    console.log("Validating treasury program structure...");
     
     try {
       const treasuryProgram = anchor.workspace.TreasuryDao;
@@ -30,21 +30,21 @@ describe("Treasury DAO - Program Structure Validation", () => {
       expect(treasuryProgram.methods).to.exist;
       expect(treasuryProgram.account).to.exist;
       
-      console.log("✅ Treasury program structure validated:");
+      console.log("Treasury program structure validated:");
       console.log("  - Methods interface available");
       console.log("  - Account interface available");
       console.log("  - Program properly configured");
       
     } catch (error) {
-      console.log("❌ Program structure validation failed:", error.message);
+      console.log("Program structure validation failed:", error.message);
       throw error;
     }
   });
 
   it("should demonstrate treasury capabilities overview", () => {
-    console.log("📋 Treasury DAO Capabilities Overview:");
+    console.log("Treasury DAO Capabilities Overview:");
     
-    console.log("✅ Core Treasury Functions:");
+    console.log("Core Treasury Functions:");
     console.log("├── Token Management");
     console.log("│   ├── Support for multiple token types");
     console.log("│   ├── Token vault creation and management");
@@ -67,7 +67,7 @@ describe("Treasury DAO - Program Structure Validation", () => {
     console.log("    └── Modular program communication");
     
     console.log("");
-    console.log("🎯 Treasury DAO is ready for:");
+    console.log("Treasury DAO is ready for:");
     console.log("  • Devnet deployment and testing");
     console.log("  • Integration with other AgroDAO modules");
     console.log("  • Real-world agricultural funding scenarios");
@@ -77,13 +77,13 @@ describe("Treasury DAO - Program Structure Validation", () => {
   });
 
   it("should validate program account types", () => {
-    console.log("🗃️ Validating treasury account types...");
+    console.log("Validating treasury account types...");
     
     try {
       const treasuryProgram = anchor.workspace.TreasuryDao;
       
       if (treasuryProgram.account) {
-        console.log("✅ Treasury account types available:");
+        console.log("Treasury account types available:");
         
         // Check for expected account types
         const accountTypes = Object.keys(treasuryProgram.account);
@@ -92,21 +92,21 @@ describe("Treasury DAO - Program Structure Validation", () => {
         // Basic validation that account interface exists
         expect(treasuryProgram.account).to.be.an('object');
         
-        console.log("✅ Account type validation completed");
+        console.log("Account type validation completed");
       } else {
-        console.log("⚠️ Account types not loaded (this is expected without a running validator)");
+        console.log("Account types not loaded (this is expected without a running validator)");
       }
       
     } catch (error) {
-      console.log("⚠️ Account validation note:", error.message);
+      console.log("Account validation note:", error.message);
       // Don't fail the test - account details require a running validator
     }
   });
 
   it("should confirm treasury program deployment readiness", () => {
-    console.log("🚀 Treasury Deployment Readiness Check:");
+    console.log("Treasury Deployment Readiness Check:");
     
-    console.log("✅ Deployment Requirements:");
+    console.log("Deployment Requirements:");
     console.log("├── Program Compilation");
     console.log("│   ├── Rust compilation successful");
     console.log("│   ├── Anchor IDL generation complete");
@@ -125,9 +125,9 @@ describe("Treasury DAO - Program Structure Validation", () => {
     console.log("    └── Proper account validation");
     
     console.log("");
-    console.log("🎉 Treasury DAO is READY for deployment!");
-    console.log("🌐 Can be deployed to devnet for POC testing");
-    console.log("🔗 Integrated with the complete AgroDAO ecosystem");
+    console.log("Treasury DAO is READY for deployment!");
+    console.log("Can be deployed to devnet for POC testing");
+    console.log("Integrated with the complete AgroDAO ecosystem");
     
     expect(true).to.be.true;
   });

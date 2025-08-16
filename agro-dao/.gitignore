@@ -1,26 +1,55 @@
-.anchor
-.DS_Store
-target
-**/*.rs.bk
-node_modules
-test-ledger
-.yarn
+# Build outputs
+.anchor/
+target/
+node_modules/
+test-ledger/
 
-# Sensitive Files - DO NOT COMMIT
+# Rust build files
+**/*.rs.bk
+Cargo.lock
+
+# Dependencies  
+yarn.lock
+package-lock.json
+
+# CRITICAL: Sensitive Files - DO NOT COMMIT THESE
 *-keypair.json
 *.pem
 *.key
-.env
-.env.local
-.env.*.local
+.env*
+my-keypair.json
+deploy-keypair.json
 
-# Solana specific
-id.json
-~/.config/solana/
+# Coordination Files (Internal Use Only)
+DEPLOYMENT.md
+test-strategy.md  
+REPUTATION_PROGRAM_GUIDE.md
+TREASURY_PROGRAM_SUMMARY.md
+deploy-config.json
+deploy.sh
+setup.sh
+run-tests.sh
+github-prep.sh
+create-keypair-from-private.py
+nohup.out
+validator.log
 
-# IDE
+# IDE and OS files
 .vscode/
 .idea/
-
-# OS
+.DS_Store
 Thumbs.db
+*.swp
+*.swo
+
+# Logs and temporary files
+*.log
+.prettierignore
+
+# Solana CLI config
+~/.config/solana/
+id.json
+
+# Hidden markdown files (internal docs only)  
+*_PROGRAM_*.md
+**/# Code Citations.md

@@ -6,25 +6,25 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-agro_dao = "CRAooBpTSWbr3m5YKm2cEWAQcHgqqARmZXYj5Z1RSsX2"
-research_dao = "7eXMy1pAPuwGFSpRJA1YBmfQq7u2wxs27g7ko23VcxxD"
-reputation_dao = "HtzmTdZL8j5VSSDMSPYpwvHZLNCbP2b27KNxHzHi52Bw"
-treasury_dao = "7jdb4RV2Wep32dBgAoprWvHTqKaCN9d6XWQ4NGtUbBpq"
-governance_dao = "FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR"
+agro_dao = "HWjwngNibn1coAzqLZhg4huw5pH5gNZY8zxJaK7s3Hbj"
+research_dao = "FUpDQNRZyx2u8uEnerDP9Y6gRT4HUaTZcU7ViziYxWQp"
+reputation_dao = "WZ13w2w964gyDhpd3GWpFuCJQWYaGNAgybt3rrrUuxD"
+treasury_dao = "BT9K4n1w56VP6pL9fAwZesLCJWJ9rmaJ2d3XZxGuGkYB"
+governance_dao = "DyazGQj7kUgXoSxcReQk1cDfRQ9QJhQaZRs3C2NXgVMy"
 
 [programs.devnet]
-agro_dao = "5tBzz5Fi88JKejLdDx9XsWHyvwdMimQjvShwpR2mgKgU"
-research_dao = "DF1y7PHHo7ekNEKztCMTDsZ3TrYdLAhgBCFQPzoi3PHw"
-reputation_dao = "HtzmTdZL8j5VSSDMSPYpwvHZLNCbP2b27KNxHzHi52Bw"
-treasury_dao = "9cDozwVvb4EHtzVwtbseAkuWRXjPfSmhuoiLiVK8yMY8"
-governance_dao = "FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR"
+agro_dao = "HWjwngNibn1coAzqLZhg4huw5pH5gNZY8zxJaK7s3Hbj"
+research_dao = "FUpDQNRZyx2u8uEnerDP9Y6gRT4HUaTZcU7ViziYxWQp"
+reputation_dao = "WZ13w2w964gyDhpd3GWpFuCJQWYaGNAgybt3rrrUuxD"
+treasury_dao = "BT9K4n1w56VP6pL9fAwZesLCJWJ9rmaJ2d3XZxGuGkYB"
+governance_dao = "DyazGQj7kUgXoSxcReQk1cDfRQ9QJhQaZRs3C2NXgVMy"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "devnet"
-wallet = "~/.config/solana/id.json"
+wallet = "./my-keypair.json"
 
 [test]
 startup_wait = 20000

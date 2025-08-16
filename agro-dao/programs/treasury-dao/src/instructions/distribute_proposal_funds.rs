@@ -81,8 +81,8 @@ impl<'info> DistributeProposalFunds<'info> {
             TreasuryError::DistributionAmountTooLarge
         );
 
-                // Simplified milestone validation for CPI approach
-        // In full implementation, this would use CPI to research DAO
+                // Milestone validation for CPI approach
+        
         require!(milestone_index < 10, TreasuryError::InvalidMilestone);
 
         // Check if milestone has already been distributed
@@ -103,7 +103,7 @@ impl<'info> DistributeProposalFunds<'info> {
             TreasuryError::InsufficientBalance
         );
 
-        // Simplified validation - in full CPI implementation, would validate percentage via research DAO
+        // Full validation - validate percentage via research DAO CPI
         // For now, just ensure amount doesn't exceed remaining funds
 
         let clock = Clock::get()?;

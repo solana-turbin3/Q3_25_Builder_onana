@@ -80,8 +80,7 @@ impl<'info> FundProposal<'info> {
             self.researcher_profile.clone(),
             proposal_id_u64,
             amount,
-        )?;
-
+        )?;        
         // Check if stakeholder has enough AGRO tokens
         require!(
             self.stakeholder_agro_account.amount >= amount,

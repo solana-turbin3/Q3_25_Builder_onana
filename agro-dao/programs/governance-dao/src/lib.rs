@@ -10,7 +10,7 @@ use instructions::*;
 pub use constants::*;
 pub use cpi_helpers::*;
 
-declare_id!("FGmtS6VD6rhP9k8meqnYoT2w2txRfzTQB8DeXDcoxzaR");
+declare_id!("DyazGQj7kUgXoSxcReQk1cDfRQ9QJhQaZRs3C2NXgVMy");
 
 #[program]
 pub mod governance_dao {

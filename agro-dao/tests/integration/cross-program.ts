@@ -170,7 +170,7 @@ describe("Integration Tests - Cross-Program Interactions", () => {
         );
         console.log("✓ Profile creation allowed during protocol pause");
       } catch (error) {
-        console.log("⚠️  Profile creation restricted during protocol pause");
+        console.log("Profile creation restricted during protocol pause");
       }
 
       // Unpause the protocol

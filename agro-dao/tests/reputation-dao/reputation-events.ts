@@ -21,7 +21,7 @@ describe("Reputation DAO - Events and Scoring", () => {
   let user2ReputationPda: anchor.web3.PublicKey;
 
   before(async () => {
-    console.log("🏆 Setting up Reputation Events test environment...");
+    console.log("Setting up Reputation Events test environment...");
     
     // Derive PDAs
     [reputationConfigPda] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -46,7 +46,7 @@ describe("Reputation DAO - Events and Scoring", () => {
 
   describe("Reputation System Initialization", () => {
     it("should initialize reputation config with default thresholds", async () => {
-      console.log("🔧 Initializing reputation configuration...");
+      console.log("Initializing reputation configuration...");
       
       try {
         await program.methods
@@ -63,27 +63,33 @@ describe("Reputation DAO - Events and Scoring", () => {
             systemProgram: anchor.web3.SystemProgram.programId,
           })
           .rpc();
-
-        const configAccount = await program.account.reputationConfig.fetch(reputationConfigPda);
         
-        expect(configAccount.authority.toString()).to.equal(authority.publicKey.toString());
-        expect(configAccount.tierThresholdBronze.toNumber()).to.equal(100);
-        expect(configAccount.tierThresholdSilver.toNumber()).to.equal(500);
-        expect(configAccount.tierThresholdGold.toNumber()).to.equal(1500);
-        expect(configAccount.tierThresholdPlatinum.toNumber()).to.equal(3000);
-        expect(configAccount.tierThresholdDiamond.toNumber()).to.equal(5000);
-
-        console.log("✅ Reputation config initialized with default thresholds");
-        console.log("  - Bronze: 100 points");
-        console.log("  - Silver: 500 points");
-        console.log("  - Gold: 1500 points");
-        console.log("  - Platinum: 3000 points");
-        console.log("  - Diamond: 5000 points");
-        
+        console.log("Reputation config initialized with default thresholds");
       } catch (error) {
-        console.log("❌ Reputation config initialization failed:", error.message);
-        throw error;
+        if (error.message?.includes("already in use")) {
+          console.log("Reputation config already initialized, fetching existing config");
+        } else {
+          console.log("Reputation config initialization failed:", error.message);
+          throw error;
+        }
       }
+
+      // Fetch and verify config (whether newly created or existing)
+      const configAccount = await program.account.reputationConfig.fetch(reputationConfigPda);
+      
+      expect(configAccount.authority.toString()).to.equal(authority.publicKey.toString());
+      expect(configAccount.tierThresholdBronze.toNumber()).to.equal(100);
+      expect(configAccount.tierThresholdSilver.toNumber()).to.equal(500);
+      expect(configAccount.tierThresholdGold.toNumber()).to.equal(1500);
+      expect(configAccount.tierThresholdPlatinum.toNumber()).to.equal(3000);
+      expect(configAccount.tierThresholdDiamond.toNumber()).to.equal(5000);
+
+      console.log("Reputation config verified with default thresholds");
+      console.log("  - Bronze: 100 points");
+      console.log("  - Silver: 500 points");
+      console.log("  - Gold: 1500 points");
+      console.log("  - Platinum: 3000 points");
+      console.log("  - Diamond: 5000 points");
     });
 
     it("should initialize user reputation accounts", async () => {
@@ -123,12 +129,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(user2Account.reputationScore.toNumber()).to.equal(0);
         expect(user2Account.tier).to.deep.equal({ none: {} });
 
-        console.log("✅ User reputation accounts initialized");
+        console.log("User reputation accounts initialized");
         console.log("  - User 1: 0 points, None tier");
         console.log("  - User 2: 0 points, None tier");
         
       } catch (error) {
-        console.log("❌ User reputation initialization failed:", error.message);
+        console.log("User reputation initialization failed:", error.message);
         throw error;
       }
     });
@@ -136,7 +142,7 @@ describe("Reputation DAO - Events and Scoring", () => {
 
   describe("Positive Reputation Events", () => {
     it("should award points for milestone completion", async () => {
-      console.log("🎯 Testing milestone completion event...");
+      console.log("Testing milestone completion event...");
       
       try {
         await program.methods
@@ -157,18 +163,18 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(userAccount.reputationScore.toNumber()).to.equal(100); // MILESTONE_SUCCESS_BONUS
         expect(userAccount.tier).to.deep.equal({ bronze: {} }); // Should be bronze tier now
 
-        console.log("✅ Milestone completion awarded 100 points");
+        console.log("Milestone completion awarded 100 points");
         console.log("  - New score: 100 points");
         console.log("  - New tier: Bronze");
         
       } catch (error) {
-        console.log("❌ Milestone completion test failed:", error.message);
+        console.log("Milestone completion test failed:", error.message);
         throw error;
       }
     });
 
     it("should award points for project completion", async () => {
-      console.log("🏆 Testing project completion event...");
+      console.log("Testing project completion event...");
       
       try {
         await program.methods
@@ -189,12 +195,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(userAccount.reputationScore.toNumber()).to.equal(300); // 100 + 200 (PROJECT_COMPLETION_BONUS)
         expect(userAccount.tier).to.deep.equal({ bronze: {} }); // Still bronze
 
-        console.log("✅ Project completion awarded 200 points");
+        console.log("Project completion awarded 200 points");
         console.log("  - New score: 300 points");
         console.log("  - Tier: Bronze");
         
       } catch (error) {
-        console.log("❌ Project completion test failed:", error.message);
+        console.log("Project completion test failed:", error.message);
         throw error;
       }
     });
@@ -220,11 +226,11 @@ describe("Reputation DAO - Events and Scoring", () => {
         
         expect(userAccount.reputationScore.toNumber()).to.equal(325); // 300 + 25 (PEER_REVIEW_BONUS)
 
-        console.log("✅ Positive peer review awarded 25 points");
+        console.log("Positive peer review awarded 25 points");
         console.log("  - New score: 325 points");
         
       } catch (error) {
-        console.log("❌ Positive peer review test failed:", error.message);
+        console.log("Positive peer review test failed:", error.message);
         throw error;
       }
     });
@@ -250,11 +256,11 @@ describe("Reputation DAO - Events and Scoring", () => {
         
         expect(userAccount.reputationScore.toNumber()).to.equal(475); // 325 + 150
 
-        console.log("✅ Custom reputation event awarded 150 points");
+        console.log("Custom reputation event awarded 150 points");
         console.log("  - New score: 475 points");
         
       } catch (error) {
-        console.log("❌ Custom reputation test failed:", error.message);
+        console.log("Custom reputation test failed:", error.message);
         throw error;
       }
     });
@@ -282,12 +288,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(userAccount.reputationScore.toNumber()).to.equal(525);
         expect(userAccount.tier).to.deep.equal({ silver: {} });
 
-        console.log("✅ User progressed to Silver tier");
+        console.log("User progressed to Silver tier");
         console.log("  - Score: 525 points");
         console.log("  - Tier: Silver");
         
       } catch (error) {
-        console.log("❌ Silver tier progression test failed:", error.message);
+        console.log("Silver tier progression test failed:", error.message);
         throw error;
       }
     });
@@ -295,7 +301,7 @@ describe("Reputation DAO - Events and Scoring", () => {
 
   describe("Negative Reputation Events", () => {
     it("should penalize milestone failures", async () => {
-      console.log("❌ Testing milestone failure event...");
+      console.log("Testing milestone failure event...");
       
       try {
         await program.methods
@@ -316,12 +322,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(userAccount.reputationScore.toNumber()).to.equal(-50); // MILESTONE_FAILURE_PENALTY
         expect(userAccount.tier).to.deep.equal({ none: {} });
 
-        console.log("✅ Milestone failure penalized 50 points");
+        console.log("Milestone failure penalized 50 points");
         console.log("  - New score: -50 points");
         console.log("  - Tier: None");
         
       } catch (error) {
-        console.log("❌ Milestone failure test failed:", error.message);
+        console.log("Milestone failure test failed:", error.message);
         throw error;
       }
     });
@@ -347,17 +353,17 @@ describe("Reputation DAO - Events and Scoring", () => {
         
         expect(userAccount.reputationScore.toNumber()).to.equal(-150); // -50 + (-100)
 
-        console.log("✅ Project abandonment penalized 100 points");
+        console.log("Project abandonment penalized 100 points");
         console.log("  - New score: -150 points");
         
       } catch (error) {
-        console.log("❌ Project abandonment test failed:", error.message);
+        console.log("Project abandonment test failed:", error.message);
         throw error;
       }
     });
 
     it("should penalize dispute resolution", async () => {
-      console.log("⚖️ Testing dispute resolution penalty...");
+      console.log("Testing dispute resolution penalty...");
       
       try {
         await program.methods
@@ -377,17 +383,17 @@ describe("Reputation DAO - Events and Scoring", () => {
         
         expect(userAccount.reputationScore.toNumber()).to.equal(-225); // -150 + (-75)
 
-        console.log("✅ Dispute resolution penalized 75 points");
+        console.log("Dispute resolution penalized 75 points");
         console.log("  - New score: -225 points");
         
       } catch (error) {
-        console.log("❌ Dispute resolution test failed:", error.message);
+        console.log("Dispute resolution test failed:", error.message);
         throw error;
       }
     });
 
     it("should handle negative custom amounts", async () => {
-      console.log("📉 Testing negative custom reputation event...");
+      console.log("Testing negative custom reputation event...");
       
       try {
         await program.methods
@@ -407,11 +413,11 @@ describe("Reputation DAO - Events and Scoring", () => {
         
         expect(userAccount.reputationScore.toNumber()).to.equal(-250); // -225 + (-25)
 
-        console.log("✅ Negative custom event penalized 25 points");
+        console.log("Negative custom event penalized 25 points");
         console.log("  - New score: -250 points");
         
       } catch (error) {
-        console.log("❌ Negative custom reputation test failed:", error.message);
+        console.log("Negative custom reputation test failed:", error.message);
         throw error;
       }
     });
@@ -419,7 +425,7 @@ describe("Reputation DAO - Events and Scoring", () => {
 
   describe("Reputation Recovery and Tier Progression", () => {
     it("should allow reputation recovery from negative scores", async () => {
-      console.log("🔄 Testing reputation recovery...");
+      console.log("Testing reputation recovery...");
       
       try {
         // Help user2 recover with multiple positive events
@@ -454,12 +460,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         expect(userAccount.reputationScore.toNumber()).to.equal(50); // -250 + 100 + 200 = 50
         expect(userAccount.tier).to.deep.equal({ none: {} }); // Still below bronze threshold
 
-        console.log("✅ User recovered from negative reputation");
+        console.log("User recovered from negative reputation");
         console.log("  - New score: 50 points");
         console.log("  - Tier: None (below bronze threshold)");
         
       } catch (error) {
-        console.log("❌ Reputation recovery test failed:", error.message);
+        console.log("Reputation recovery test failed:", error.message);
         throw error;
       }
     });
@@ -489,7 +495,7 @@ describe("Reputation DAO - Events and Scoring", () => {
         let userAccount = await program.account.userReputation.fetch(user1ReputationPda);
         expect(userAccount.reputationScore.toNumber()).to.equal(1500);
         expect(userAccount.tier).to.deep.equal({ gold: {} });
-        console.log("  ✅ Reached Gold tier: 1500 points");
+        console.log("  Reached Gold tier: 1500 points");
 
         // Add points to reach Platinum (3000)
         await program.methods
@@ -508,7 +514,7 @@ describe("Reputation DAO - Events and Scoring", () => {
         userAccount = await program.account.userReputation.fetch(user1ReputationPda);
         expect(userAccount.reputationScore.toNumber()).to.equal(3000);
         expect(userAccount.tier).to.deep.equal({ platinum: {} });
-        console.log("  ✅ Reached Platinum tier: 3000 points");
+        console.log("  Reached Platinum tier: 3000 points");
 
         // Add points to reach Diamond (5000)
         await program.methods
@@ -527,12 +533,12 @@ describe("Reputation DAO - Events and Scoring", () => {
         userAccount = await program.account.userReputation.fetch(user1ReputationPda);
         expect(userAccount.reputationScore.toNumber()).to.equal(5000);
         expect(userAccount.tier).to.deep.equal({ diamond: {} });
-        console.log("  ✅ Reached Diamond tier: 5000 points");
+        console.log("  Reached Diamond tier: 5000 points");
 
-        console.log("🏆 Complete tier progression demonstrated!");
+        console.log("Complete tier progression demonstrated!");
         
       } catch (error) {
-        console.log("❌ Tier progression test failed:", error.message);
+        console.log("Tier progression test failed:", error.message);
         throw error;
       }
     });
@@ -540,13 +546,13 @@ describe("Reputation DAO - Events and Scoring", () => {
 
   describe("Reputation System Summary", () => {
     it("should demonstrate comprehensive reputation functionality", async () => {
-      console.log("📊 Reputation System Summary:");
+      console.log("Reputation System Summary:");
       
       const user1Account = await program.account.userReputation.fetch(user1ReputationPda);
       const user2Account = await program.account.userReputation.fetch(user2ReputationPda);
       const configAccount = await program.account.reputationConfig.fetch(reputationConfigPda);
 
-      console.log("✅ Reputation Events System:");
+      console.log("Reputation Events System:");
       console.log("├── Positive Events");
       console.log("│   ├── Milestone Completed: +100 points");
       console.log("│   ├── Project Completed: +200 points");
@@ -570,7 +576,7 @@ describe("Reputation DAO - Events and Scoring", () => {
       console.log(`  User 2: ${user2Account.reputationScore.toNumber()} points, ${Object.keys(user2Account.tier)[0]} tier`);
       
       console.log("");
-      console.log("🎯 Reputation system is fully functional!");
+      console.log("Reputation system is fully functional!");
       console.log("  • Event-driven reputation scoring");
       console.log("  • Automatic tier progression");
       console.log("  • Recovery from negative reputation");

@@ -11,28 +11,44 @@ describe("AgroDao - Protocol Initialization", () => {
   });
 
   it("Should initialize protocol successfully", async () => {
+    console.log("Attempting to initialize protocol...");
+    console.log("📍 Protocol State PDA:", setup.protocolStatePda.toString());
+    console.log("📍 Authority:", setup.authority.publicKey.toString());
+    console.log("📍 Agro DAO Program ID:", setup.agroDao.programId.toString());
+
     // Check if protocol already exists
     try {
       const existingProtocol = await setup.agroDao.account.protocolState.fetch(
         setup.protocolStatePda
       );
       console.log("Protocol already initialized, skipping initialization test");
+      console.log("Existing protocol state:", {
+        authority: existingProtocol.authority.toString(),
+        version: existingProtocol.protocolVersion,
+        isPaused: existingProtocol.isPaused
+      });
       return;
-    } catch {
-      // Protocol doesn't exist, proceed with initialization
+    } catch (error) {
+      console.log("Protocol doesn't exist, proceeding with initialization");
+      console.log("Error details:", error.message);
     }
 
-    const tx = await setup.agroDao.methods
-      .initializeProtocol()
-      .accounts({
-        protocolState: setup.protocolStatePda,
-        authority: setup.authority.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .signers([setup.authority])
-      .rpc();
+    try {
+      const tx = await setup.agroDao.methods
+        .initializeProtocol()
+        .accounts({
+          protocolState: setup.protocolStatePda,
+          authority: setup.authority.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([setup.authority])
+        .rpc();
 
-    console.log("Protocol initialized successfully, TX:", tx);
+      console.log("Protocol initialized successfully, TX:", tx);
+    } catch (error) {
+      console.log("Protocol initialization failed:", error.message);
+      throw error;
+    }
 
     // Verify initialization
     const protocolState = await setup.agroDao.account.protocolState.fetch(

@@ -352,7 +352,7 @@ describe("Integration Tests - Full Research Workflow", () => {
             .signers([integrationResearcher])
             .rpc();
 
-          console.log("⚠️  Small funding proposal created (protocol validation may not be enforced)");
+          console.log("Small funding proposal created (protocol validation may not be enforced)");
         } catch (error) {
           console.log("✓ Small funding proposal rejected (protocol validation working)");
         }
@@ -430,7 +430,7 @@ describe("Integration Tests - Full Research Workflow", () => {
         );
         console.log("✓ Profile creation succeeded despite low researcher funding");
       } catch (error) {
-        console.log("⚠️  Profile creation failed due to insufficient funds");
+        console.log("Profile creation failed due to insufficient funds");
       }
 
       // Test network delay scenarios
@@ -449,7 +449,7 @@ describe("Integration Tests - Full Research Workflow", () => {
         await testHelpers.verifyResearcher(delayProfilePda, setup.authority);
         console.log("✓ Delayed verification completed successfully");
       } catch (error) {
-        console.log("⚠️  Delayed verification failed:", error.message);
+        console.log("Delayed verification failed:", error.message);
       }
 
       // Test state consistency after errors

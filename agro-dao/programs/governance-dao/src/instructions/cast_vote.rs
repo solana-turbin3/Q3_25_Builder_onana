@@ -141,7 +141,10 @@ impl<'info> CastVote<'info> {
         // Get the voter's AGRO token balance from their token account
         let agro_account = &self.voter_agro_account;
         
-        if agro_account.owner != &self.voter.key() {
+        // Associated Token Accounts are owned by the Token Program, not the user
+        // So we check the token program ownership instead
+        let token_program_id = anchor_spl::token::ID;
+        if agro_account.owner != &token_program_id {
             return Err(GovernanceError::InvalidTokenAccount.into());
         }
         
@@ -167,6 +170,15 @@ impl<'info> CastVote<'info> {
             return Err(GovernanceError::InvalidTokenAccount.into());
         }
         
+        // Validate that the token account owner (bytes 32-64) matches the voter
+        let owner_bytes: [u8; 32] = account_data[32..64].try_into()
+            .map_err(|_| GovernanceError::InvalidTokenAccount)?;
+        let owner_pubkey = Pubkey::new_from_array(owner_bytes);
+        
+        if owner_pubkey != self.voter.key() {
+            return Err(GovernanceError::InvalidTokenAccount.into());
+        }
+        
         Ok(amount)
     }
     //    // For testing purposes, return a default balance that meets minimum requirements
@@ -176,11 +188,15 @@ impl<'info> CastVote<'info> {
 
     fn get_voter_reputation_weight(&self) -> Result<u64> {
         // Query the reputation program for the voter's reputation weight
+        // For simplicity, passing empty seeds for now
+        let empty_seeds: &[&[&[u8]]] = &[];
+        
         let reputation_weight = crate::cpi_helpers::GovernanceCpi::get_user_reputation(
             &self.reputation_program.to_account_info(),
             &self.reputation_config.to_account_info(),
             &self.user_reputation.to_account_info(),
             &self.voter.key(),
+            empty_seeds,
         )?;
         
         // Apply reputation multiplier (e.g., Bronze=1x, Silver=1.25x, Gold=1.5x, Diamond=2x)

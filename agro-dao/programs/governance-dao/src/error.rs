@@ -64,4 +64,7 @@ pub enum GovernanceError {
     
     #[msg("Arithmetic overflow")]
     ArithmeticOverflow,
+    
+    #[msg("Invalid instruction data")]
+    InvalidInstruction,
 }

@@ -19,3 +19,8 @@ idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
 [dependencies]
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
+
+# Add other DAO programs as dependencies for CPI
+treasury-dao = { path = "../treasury-dao", features = ["cpi"] }
+research-dao = { path = "../research-dao", features = ["cpi"] }
+reputation-dao = { path = "../reputation-dao", features = ["cpi"] }

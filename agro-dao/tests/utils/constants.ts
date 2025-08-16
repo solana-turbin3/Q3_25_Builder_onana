@@ -44,10 +44,10 @@ export const TEST_CONSTANTS = {
   PROPOSAL_DESCRIPTION: "A comprehensive study on sustainable crop rotation techniques to improve soil health and crop yield while reducing environmental impact",
   FUNDING_TARGET: new BN(5_000_000), // 0.005 SOL
   
-  // IPFS hashes (mock data - all values under 255 for u8 arrays)
-  MOCK_IPFS_HASH: Array.from({ length: 32 }, (_, i) => (i * 7) % 256),
-  MOCK_EVIDENCE_HASH: Array.from({ length: 32 }, (_, i) => (i * 11) % 256),
-  MOCK_FINDINGS_HASH: Array.from({ length: 32 }, (_, i) => (i * 13) % 256),
+  // IPFS content hashes (deterministic test data)
+  SAMPLE_IPFS_HASH: Array.from({ length: 32 }, (_, i) => (i * 7) % 256),
+  SAMPLE_EVIDENCE_HASH: Array.from({ length: 32 }, (_, i) => (i * 11) % 256),
+  SAMPLE_FINDINGS_HASH: Array.from({ length: 32 }, (_, i) => (i * 13) % 256),
   
   // Time constants
   SECONDS_PER_DAY: 24 * 60 * 60,
@@ -93,8 +93,8 @@ export const RESEARCH_CATEGORIES = {
   WATER_MANAGEMENT: { waterManagement: {} },
 };
 
-// Common 32-byte mock hash
-const u8Hash = (seed = 7) => Array.from({ length: 32 }, (_, i) => ((i * seed) % 256));
+// Common 32-byte content hash for testing
+export const SAMPLE_HASH = Array.from({ length: 32 }, (_, i) => (i * 17) % 256);
 
 export const TEST_MILESTONES = {
   INITIAL_RESEARCH: {
@@ -124,7 +124,7 @@ export const TEST_PROPOSALS = {
     category: RESEARCH_CATEGORIES.CROP_IMPROVEMENT,
     fundingGoal: new BN(1_000_000),
     duration: new BN(Math.floor(Date.now() / 1000) + 30 * TEST_CONSTANTS.SECONDS_PER_DAY),
-    ipfsHash: u8Hash(7),
+    ipfsHash: TEST_CONSTANTS.SAMPLE_IPFS_HASH,
     milestones: [],
   },
   SOIL_HEALTH: {
@@ -133,7 +133,7 @@ export const TEST_PROPOSALS = {
     category: RESEARCH_CATEGORIES.SOIL_HEALTH,
     fundingGoal: new BN(2_000_000),
     duration: new BN(Math.floor(Date.now() / 1000) + 45 * TEST_CONSTANTS.SECONDS_PER_DAY),
-    ipfsHash: u8Hash(11),
+    ipfsHash: TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH,
     milestones: [],
   },
   PRECISION_AGRICULTURE: {
@@ -142,7 +142,7 @@ export const TEST_PROPOSALS = {
     category: RESEARCH_CATEGORIES.WATER_MANAGEMENT,
     fundingGoal: new BN(3_000_000),
     duration: new BN(Math.floor(Date.now() / 1000) + 60 * TEST_CONSTANTS.SECONDS_PER_DAY),
-    ipfsHash: u8Hash(13),
+    ipfsHash: TEST_CONSTANTS.SAMPLE_FINDINGS_HASH,
     milestones: [],
   },
 };

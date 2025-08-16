@@ -11,7 +11,7 @@ pub use constants::*;
 pub use error::*;
 use state::ReputationTier;
 
-declare_id!("HtzmTdZL8j5VSSDMSPYpwvHZLNCbP2b27KNxHzHi52Bw");
+declare_id!("WZ13w2w964gyDhpd3GWpFuCJQWYaGNAgybt3rrrUuxD");
 
 #[program]
 pub mod reputation_dao {

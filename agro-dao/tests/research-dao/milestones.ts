@@ -80,7 +80,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
     it("Should publish a milestone successfully", async () => {
       // First milestone (index 0) with 32-byte evidence hash
       await setup.researchDao.methods
-        .publishMilestone(0, TEST_CONSTANTS.MOCK_EVIDENCE_HASH)
+        .publishMilestone(0, TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH)
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
@@ -101,7 +101,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
 
       try {
         await setup.researchDao.methods
-          .publishMilestone(1, TEST_CONSTANTS.MOCK_EVIDENCE_HASH)
+          .publishMilestone(1, TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH)
           .accounts({
             researchProposal: proposalPda,
             researcherProfile: profilePda,
@@ -143,7 +143,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
     // Only index 0 exists in this test setup; if already completed, expect error
     for (let i = 0; i < 1; i++) {
         await setup.researchDao.methods
-          .publishMilestone(i, TEST_CONSTANTS.MOCK_EVIDENCE_HASH)
+          .publishMilestone(i, TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH)
           .accounts({
             researchProposal: proposalPda,
             researcherProfile: profilePda,
@@ -192,7 +192,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
 
       try {
         await setup.researchDao.methods
-          .publishMilestone(0, TEST_CONSTANTS.MOCK_EVIDENCE_HASH)
+          .publishMilestone(0, TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH)
           .accounts({
             researchProposal: unfundedProposalPda,
             researcherProfile: profilePda,
@@ -212,7 +212,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
   describe("Research Findings Publication", () => {
     it("Should publish research findings successfully", async () => {
       await setup.researchDao.methods
-        .publishFindings(TEST_CONSTANTS.MOCK_FINDINGS_HASH)
+        .publishFindings(TEST_CONSTANTS.SAMPLE_FINDINGS_HASH)
         .accounts({
           researchProposal: proposalPda,
           researcherProfile: profilePda,
@@ -272,7 +272,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
 
       try {
         await setup.researchDao.methods
-          .publishFindings(TEST_CONSTANTS.MOCK_FINDINGS_HASH)
+          .publishFindings(TEST_CONSTANTS.SAMPLE_FINDINGS_HASH)
           .accounts({
             researchProposal: newProposalPda,
             researcherProfile: profilePda,
@@ -391,7 +391,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
 
       // Publish findings; just verify it completes
       await setup.researchDao.methods
-        .publishFindings(TEST_CONSTANTS.MOCK_FINDINGS_HASH)
+        .publishFindings(TEST_CONSTANTS.SAMPLE_FINDINGS_HASH)
         .accounts({
           researchProposal: peerReviewProposalPda,
           researcherProfile: profilePda,
@@ -470,7 +470,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
       // Publish two milestones (indices 0 and 1)
       for (const i of [0, 1]) {
         await setup.researchDao.methods
-          .publishMilestone(i, TEST_CONSTANTS.MOCK_EVIDENCE_HASH)
+          .publishMilestone(i, TEST_CONSTANTS.SAMPLE_EVIDENCE_HASH)
           .accounts({
             researchProposal: lifecycleProposalPda,
             researcherProfile: lifecycleProfilePda,
@@ -485,7 +485,7 @@ describe("ResearchDao - Milestones & Research Lifecycle", () => {
 
       // Publish findings
       await setup.researchDao.methods
-        .publishFindings(TEST_CONSTANTS.MOCK_FINDINGS_HASH)
+        .publishFindings(TEST_CONSTANTS.SAMPLE_FINDINGS_HASH)
         .accounts({
           researchProposal: lifecycleProposalPda,
           researcherProfile: lifecycleProfilePda,
