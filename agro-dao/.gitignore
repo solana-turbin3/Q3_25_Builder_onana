@@ -34,6 +34,12 @@ create-keypair-from-private.py
 nohup.out
 validator.log
 
+# Temporary scripts and check files
+check-*.js
+check-*.py
+temp-*.js
+temp-*.py
+
 # IDE and OS files
 .vscode/
 .idea/
