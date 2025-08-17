@@ -163,35 +163,39 @@ impl<'info> ExecuteProposal<'info> {
     fn execute_research_proposal(&mut self, proposal_id: u64) -> Result<()> {
         msg!("Executing research proposal: {}", proposal_id);
         
-        // Research proposals typically involve funding allocation and researcher reputation updates
+        // Research proposals are funded through the treasury system
+        // Parse as treasury instruction since research funding goes through treasury
         if let Some(ref instruction_data) = self.proposal.instruction_data {
-            let research_instruction = crate::cpi_helpers::InstructionParser::parse_research_instruction(instruction_data)?;
+            let treasury_instruction = crate::cpi_helpers::InstructionParser::parse_treasury_instruction(instruction_data)?;
             
-            match research_instruction {
-                crate::cpi_helpers::ResearchInstruction::UpdateProposal { proposal_id: research_id, status } => {
-                    // Call research program to update proposal status
-                    crate::cpi_helpers::GovernanceCpi::update_research_project(
-                        &self.research_program.to_account_info(),
-                        &self.researcher_profile.to_account_info(),
-                        &self.proposal_funding.to_account_info(), // Reusing as research proposal account
+            match treasury_instruction {
+                crate::cpi_helpers::TreasuryInstruction::FundProposal { proposal_id: fund_id, amount } => {
+                    msg!("Funding research proposal {} with {} tokens", fund_id, amount);
+                    
+                    // Call treasury program to fund the research proposal
+                    crate::cpi_helpers::GovernanceCpi::fund_treasury_proposal(
+                        &self.treasury_program.to_account_info(),
+                        &self.treasury_config.to_account_info(),
+                        &self.proposal_funding.to_account_info(),
+                        &self.stake_account.to_account_info(),
+                        &self.agro_mint.to_account_info(),
+                        &self.stakeholder_agro_account.to_account_info(),
                         &self.authority.to_account_info(),
-                        research_id.into(),
-                        status,
+                        &self.research_proposal.to_account_info(),
+                        &self.researcher_profile.to_account_info(),
+                        &self.research_program.to_account_info(),
+                        &self.token_program.to_account_info(),
+                        &self.system_program.to_account_info(),
+                        &self.rent.to_account_info(),
+                        fund_id,
+                        amount,
                         &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
                     )?;
                     
-                    // Update researcher reputation for successful proposal approval
-                    msg!("Updating researcher reputation for approved proposal");
-                    
-                    // In production, this would make a CPI call to reputation program:
-                    // let reputation_cpi_accounts = UpdateReputationScore { ... };
-                    // let reputation_ctx = CpiContext::new_with_signer(reputation_program, reputation_cpi_accounts, seeds);
-                    // reputation_dao::cpi::update_reputation_score(reputation_ctx, ReputationEvent::ProposalApproved, 200)?;
-                    
-                    msg!("Researcher reputation update executed");
+                    msg!("Research proposal funding executed successfully");
                 },
                 _ => {
-                    msg!("Research instruction type not yet implemented");
+                    msg!("Treasury instruction type not supported for research proposals");
                 }
             }
         }
@@ -207,23 +211,6 @@ impl<'info> ExecuteProposal<'info> {
             let param_instruction = crate::cpi_helpers::InstructionParser::parse_parameter_instruction(instruction_data)?;
             
             match param_instruction {
-                crate::cpi_helpers::ParameterInstruction::UpdateThresholds { quorum_bps, approval_bps } => {
-                    // Update governance thresholds
-                    if let Some(quorum) = quorum_bps {
-                        msg!("Updating quorum threshold to: {} bps", quorum);
-                        
-                        // Update governance config quorum threshold
-                        self.governance_config.quorum_threshold_bps = quorum;
-                        msg!("Governance quorum threshold updated to {} bps", quorum);
-                    }
-                    if let Some(approval) = approval_bps {
-                        msg!("Updating approval threshold to: {} bps", approval);
-                        
-                        // Update governance config approval threshold  
-                        self.governance_config.approval_threshold_bps = approval;
-                        msg!("Governance approval threshold updated to {} bps", approval);
-                    }
-                },
                 crate::cpi_helpers::ParameterInstruction::EmergencyAction { pause_system } => {
                     msg!("Emergency action: pause_system = {}", pause_system);
                     // Update emergency pause across all programs with full CPI  
@@ -236,9 +223,6 @@ impl<'info> ExecuteProposal<'info> {
                         &[&[GOVERNANCE_SEED, &[self.governance_config.bump]]],
                     )?;
                 },
-                _ => {
-                    msg!("Parameter instruction type not yet implemented");
-                }
             }
         }
         

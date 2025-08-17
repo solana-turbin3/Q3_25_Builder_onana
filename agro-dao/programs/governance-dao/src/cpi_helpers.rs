@@ -3,12 +3,10 @@ use crate::constants::*;
 use crate::error::*;
 
 // Import CPI modules from other programs for cross-program calls
-use research_dao::cpi::accounts::ValidateProposalForFunding;
-use research_dao::cpi::validate_proposal_for_funding;
-use reputation_dao::cpi::accounts::GetReputation;
-use reputation_dao::cpi::get_reputation;
 use treasury_dao::cpi::accounts::{FundProposal, EmergencyPause};
 use treasury_dao::cpi::{fund_proposal, emergency_pause};
+use reputation_dao::cpi::accounts::GetReputation;
+use reputation_dao::cpi::get_reputation;
 
 /// CPI helper functions for governance program to interact with other programs
 /// This is the main interface for cross-program communication from governance
@@ -69,8 +67,20 @@ impl GovernanceCpi {
                 msg!("CPI call successful, reading updated account data");
                 
                 // After successful CPI, read the updated reputation from the account
-                let final_score = user_reputation.data.borrow()[8..16].try_into().unwrap();
-                Ok(u64::from_le_bytes(final_score))
+                // Use consistent byte offset (41-49) matching the direct read path
+                let account_data = user_reputation.try_borrow_data()
+                    .map_err(|_| GovernanceError::Unauthorized)?;
+                
+                if account_data.len() >= 49 {
+                    let reputation_bytes: [u8; 8] = account_data[41..49].try_into()
+                        .map_err(|_| GovernanceError::Unauthorized)?;
+                    let reputation_score = i64::from_le_bytes(reputation_bytes);
+                    let final_score = if reputation_score < 0 { 0 } else { reputation_score as u64 };
+                    Ok(final_score)
+                } else {
+                    // Fallback to default if account data is incomplete
+                    Ok(50)
+                }
             },
             Err(e) => {
                 msg!("CPI call failed: {:?}, using fallback", e);
@@ -90,12 +100,13 @@ impl GovernanceCpi {
         let account_data = user_reputation.try_borrow_data()
             .map_err(|_| GovernanceError::Unauthorized)?;
         
-        // Try to read the first 8 bytes as reputation score
-        if account_data.len() >= 8 {
-            let reputation_bytes: [u8; 8] = account_data[0..8].try_into()
+        // Use consistent byte offset (41-49) matching the main read path
+        if account_data.len() >= 49 {
+            let reputation_bytes: [u8; 8] = account_data[41..49].try_into()
                 .map_err(|_| GovernanceError::Unauthorized)?;
-            let reputation = u64::from_le_bytes(reputation_bytes);
-            Ok(reputation)
+            let reputation_score = i64::from_le_bytes(reputation_bytes);
+            let final_score = if reputation_score < 0 { 0 } else { reputation_score as u64 };
+            Ok(final_score)
         } else {
             Ok(50) // Default fallback reputation
         }
@@ -155,43 +166,9 @@ impl GovernanceCpi {
         Ok(())
     }
 
-    /// Update research project status and validate proposal for funding
-    /// This calls the research program to ensure the proposal is valid before funding
-    pub fn update_research_project<'info>(
-        research_program: &AccountInfo<'info>,
-        proposal: &AccountInfo<'info>,
-        researcher_profile: &AccountInfo<'info>,
-        _authority: &AccountInfo,
-        proposal_id: u64,
-        _status: u8,
-        seeds: &[&[&[u8]]],
-    ) -> Result<()> {
-        msg!("Validating research proposal {} via CPI", proposal_id);
-        
-        // Set up the account structure for research program validation CPI
-        let cpi_accounts = ValidateProposalForFunding {
-            proposal: proposal.clone(),
-            researcher_profile: researcher_profile.clone(),
-        };
-        
-        // Create CPI context with governance program seeds for authority
-        let cpi_context = CpiContext::new_with_signer(
-            research_program.clone(),
-            cpi_accounts,
-            seeds
-        );
-        
-        // Call research program to validate the proposal is eligible for funding
-        let funding_amount = 1000u64; // Standard validation amount
-        validate_proposal_for_funding(cpi_context, proposal_id, funding_amount)?;
-        
-        msg!("Successfully validated research proposal {} via CPI", proposal_id);
-        Ok(())
-    }
-
     /// Update system parameters across multiple programs using CPI calls
-    /// This is how governance enforces system-wide changes like emergency pauses
-    /// and threshold updates across all the DAO programs
+    /// Currently only supports emergency pause functionality
+    /// Treasury emergency pause is the only implemented cross-program operation
     pub fn update_system_parameters<'info>(
         treasury_program: &AccountInfo<'info>,
         treasury_config: &AccountInfo<'info>,
@@ -226,59 +203,11 @@ impl GovernanceCpi {
                 emergency_pause(treasury_ctx)?;
                 msg!("  Treasury DAO: Emergency operations halted via actual CPI");
                 
-                // Note: Research DAO and Reputation DAO would also be paused here
-                // when their emergency pause instructions are implemented
-                msg!("Research DAO: Emergency operations halted via CPI"); 
-                msg!("Reputation DAO: Emergency operations halted via CPI");
-                
-                msg!("Emergency pause executed via actual CPI calls");
-            },
-            2 => {
-                // System-wide threshold and parameter updates
-                msg!("Executing system-wide threshold updates via direct config updates");
-                
-                if parameter_data.len() >= 5 {
-                    // Extract new threshold values from parameter data
-                    let new_threshold_bps = u16::from_le_bytes([parameter_data[1], parameter_data[2]]);
-                    let new_fee_bps = u16::from_le_bytes([parameter_data[3], parameter_data[4]]);
-                    
-                    msg!("Applying new parameters via actual updates:");
-                    msg!("  - Quorum threshold: {} BPS", new_threshold_bps);
-                    msg!("  - Fee rate: {} BPS", new_fee_bps);
-                    msg!("  - Authority: {}", authority.key());
-                    
-                    // 1. Governance config thresholds are updated in execute_proposal.rs
-                    // 2. Update treasury fee rates via CPI
-                    msg!("Updating treasury fee rates via CPI");
-                    
-                    // Use treasury emergency pause as a proxy for fee rate updates
-                    // In a full implementation, there would be a dedicated update_fee_rate instruction
-                    let treasury_cpi_accounts = EmergencyPause {
-                        treasury_config: treasury_config.clone(),
-                        authority: authority.clone(),
-                    };
-                    let treasury_ctx = CpiContext::new_with_signer(treasury_program.clone(), treasury_cpi_accounts, seeds);
-                    emergency_pause(treasury_ctx)?;
-                    msg!("Treasury fee rates updated via actual CPI");
-                    
-                    // 3. Update reputation scoring thresholds via CPI
-                    msg!("Updating reputation tier thresholds via CPI");
-                    
-                    // Use reputation get_reputation as a proxy for threshold updates
-                    // In a full implementation, there would be a dedicated update_thresholds instruction
-                    let reputation_cpi_accounts = GetReputation {
-                        reputation_config: treasury_config.clone(), // Use available account
-                        user_reputation: treasury_config.clone(), // Use available account  
-                    };
-                    let reputation_ctx = CpiContext::new_with_signer(treasury_program.clone(), reputation_cpi_accounts, seeds);
-                    get_reputation(reputation_ctx, authority.key())?;
-                    msg!("Reputation tier thresholds updated via actual CPI");
-                    
-                    msg!("System-wide threshold updates applied via actual CPI calls");
-                }
+                msg!("Emergency pause executed (Treasury only)");
             },
             _ => {
-                msg!("Unknown parameter type: {}", param_type);
+                msg!("Unsupported parameter type: {}", param_type);
+                msg!("Currently only emergency pause (type 1) is supported");
                 return Err(GovernanceError::InvalidInstruction.into());
             }
         }
@@ -328,20 +257,10 @@ pub enum TreasuryInstruction {
     Withdraw { amount: u64 },
 }
 
-/// Research instruction types that governance can execute
-#[derive(Debug)]
-pub enum ResearchInstruction {
-    UpdateProposal { proposal_id: u64, status: u8 },
-    FundResearch { research_id: u64, amount: u64 },
-    CompleteResearch { research_id: u64 },
-}
-
 /// Parameter instruction types for system-wide updates
 #[derive(Debug)]
 pub enum ParameterInstruction {
-    UpdateThresholds { quorum_bps: Option<u16>, approval_bps: Option<u16> },
     EmergencyAction { pause_system: bool },
-    UpdateFees { new_fee_bps: u16 },
 }
 
 impl InstructionParser {
@@ -380,31 +299,6 @@ impl InstructionParser {
         }
     }
 
-    /// Parse research instruction data from proposal
-    /// Extracts research-specific parameters for validation and updates
-    pub fn parse_research_instruction(data: &[u8]) -> Result<ResearchInstruction> {
-        // Need at least 8 bytes for discriminator
-        if data.len() < 8 {
-            return Err(GovernanceError::InvalidInstruction.into());
-        }
-        
-        // Extract proposal ID and status from instruction data
-        if data.len() >= 16 {
-            let proposal_id = u64::from_le_bytes(
-                data[8..16].try_into().map_err(|_| GovernanceError::InvalidInstruction)?
-            );
-            let status = if data.len() >= 17 { data[16] } else { 1 };
-            
-            Ok(ResearchInstruction::UpdateProposal { proposal_id, status })
-        } else {
-            // Default research instruction
-            Ok(ResearchInstruction::UpdateProposal { 
-                proposal_id: 0, 
-                status: 1 
-            })
-        }
-    }
-
     /// Parse parameter change instruction data
     /// Handles system-wide parameter updates and emergency actions
     pub fn parse_parameter_instruction(data: &[u8]) -> Result<ParameterInstruction> {
@@ -421,26 +315,9 @@ impl InstructionParser {
                 let pause_system = data.get(1).copied().unwrap_or(1) != 0;
                 Ok(ParameterInstruction::EmergencyAction { pause_system })
             },
-            2 => {
-                // Threshold updates - quorum and approval thresholds
-                let quorum_bps = if data.len() >= 3 {
-                    Some(u16::from_le_bytes([data[1], data[2]]))
-                } else {
-                    Some(5000) // Default 50% quorum
-                };
-                let approval_bps = if data.len() >= 5 {
-                    Some(u16::from_le_bytes([data[3], data[4]]))
-                } else {
-                    Some(6000) // Default 60% approval
-                };
-                Ok(ParameterInstruction::UpdateThresholds { quorum_bps, approval_bps })
-            },
             _ => {
-                // Unknown parameter type - default to threshold update
-                Ok(ParameterInstruction::UpdateThresholds { 
-                    quorum_bps: Some(5000), 
-                    approval_bps: Some(6000) 
-                })
+                // Only emergency actions are currently supported
+                Err(GovernanceError::InvalidInstruction.into())
             }
         }
     }
